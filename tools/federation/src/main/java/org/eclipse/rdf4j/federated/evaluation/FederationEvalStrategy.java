@@ -15,10 +15,9 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
-import org.eclipse.rdf4j.collection.factory.api.CollectionFactory;
+import org.eclipse.rdf4j.common.annotation.Experimental;
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
 import org.eclipse.rdf4j.common.iteration.EmptyIteration;
 import org.eclipse.rdf4j.common.iteration.SingletonIteration;
@@ -39,6 +38,7 @@ import org.eclipse.rdf4j.federated.algebra.FedXService;
 import org.eclipse.rdf4j.federated.algebra.FedXZeroLengthPath;
 import org.eclipse.rdf4j.federated.algebra.FederatedDescribeOperator;
 import org.eclipse.rdf4j.federated.algebra.FilterExpr;
+import org.eclipse.rdf4j.federated.algebra.FilterTuple;
 import org.eclipse.rdf4j.federated.algebra.FilterValueExpr;
 import org.eclipse.rdf4j.federated.algebra.HolderNode;
 import org.eclipse.rdf4j.federated.algebra.NJoin;
@@ -53,12 +53,14 @@ import org.eclipse.rdf4j.federated.cache.SourceSelectionCache;
 import org.eclipse.rdf4j.federated.endpoint.Endpoint;
 import org.eclipse.rdf4j.federated.evaluation.concurrent.ControlledWorkerScheduler;
 import org.eclipse.rdf4j.federated.evaluation.concurrent.ParallelServiceExecutor;
+import org.eclipse.rdf4j.federated.evaluation.iterator.BindLeftJoinIteration;
 import org.eclipse.rdf4j.federated.evaluation.iterator.FedXPathIteration;
 import org.eclipse.rdf4j.federated.evaluation.iterator.FederatedDescribeIteration;
+import org.eclipse.rdf4j.federated.evaluation.iterator.FilteringIteration;
 import org.eclipse.rdf4j.federated.evaluation.iterator.SingleBindingSetIteration;
+import org.eclipse.rdf4j.federated.evaluation.join.ControlledWorkerBindJoin;
 import org.eclipse.rdf4j.federated.evaluation.join.ControlledWorkerBoundJoin;
 import org.eclipse.rdf4j.federated.evaluation.join.ControlledWorkerJoin;
-import org.eclipse.rdf4j.federated.evaluation.join.ControlledWorkerLeftJoin;
 import org.eclipse.rdf4j.federated.evaluation.join.SynchronousBoundJoin;
 import org.eclipse.rdf4j.federated.evaluation.join.SynchronousJoin;
 import org.eclipse.rdf4j.federated.evaluation.union.ControlledWorkerUnion;
@@ -68,6 +70,7 @@ import org.eclipse.rdf4j.federated.evaluation.union.ParallelPreparedUnionTask;
 import org.eclipse.rdf4j.federated.evaluation.union.ParallelUnionOperatorTask;
 import org.eclipse.rdf4j.federated.evaluation.union.SynchronousWorkerUnion;
 import org.eclipse.rdf4j.federated.evaluation.union.WorkerUnionBase;
+import org.eclipse.rdf4j.federated.exception.ExceptionUtil;
 import org.eclipse.rdf4j.federated.exception.FedXRuntimeException;
 import org.eclipse.rdf4j.federated.exception.IllegalQueryException;
 import org.eclipse.rdf4j.federated.optimizer.DefaultFedXCostModel;
@@ -97,6 +100,7 @@ import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.algebra.DescribeOperator;
 import org.eclipse.rdf4j.query.algebra.Join;
+import org.eclipse.rdf4j.query.algebra.LeftJoin;
 import org.eclipse.rdf4j.query.algebra.QueryRoot;
 import org.eclipse.rdf4j.query.algebra.Service;
 import org.eclipse.rdf4j.query.algebra.StatementPattern;
@@ -104,19 +108,19 @@ import org.eclipse.rdf4j.query.algebra.TupleExpr;
 import org.eclipse.rdf4j.query.algebra.ValueExpr;
 import org.eclipse.rdf4j.query.algebra.Var;
 import org.eclipse.rdf4j.query.algebra.evaluation.QueryEvaluationStep;
+import org.eclipse.rdf4j.query.algebra.evaluation.QueryOptimizer;
 import org.eclipse.rdf4j.query.algebra.evaluation.QueryValueEvaluationStep;
 import org.eclipse.rdf4j.query.algebra.evaluation.ValueExprEvaluationException;
 import org.eclipse.rdf4j.query.algebra.evaluation.federation.FederatedService;
 import org.eclipse.rdf4j.query.algebra.evaluation.federation.ServiceJoinIterator;
-import org.eclipse.rdf4j.query.algebra.evaluation.impl.DefaultEvaluationStrategy;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.EvaluationStatistics;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.QueryEvaluationContext;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.StrictEvaluationStrategy;
 import org.eclipse.rdf4j.query.algebra.evaluation.iterator.BadlyDesignedLeftJoinIterator;
-import org.eclipse.rdf4j.query.algebra.evaluation.iterator.DescribeIteration;
 import org.eclipse.rdf4j.query.algebra.evaluation.iterator.HashJoinIteration;
 import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.ConstantOptimizer;
 import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.DisjunctiveConstraintOptimizer;
+import org.eclipse.rdf4j.query.algebra.evaluation.optimizer.StandardQueryOptimizerPipeline;
 import org.eclipse.rdf4j.query.algebra.evaluation.util.QueryEvaluationUtil;
 import org.eclipse.rdf4j.query.algebra.helpers.TupleExprs;
 import org.eclipse.rdf4j.query.algebra.helpers.collectors.VarNameCollector;
@@ -145,6 +149,14 @@ public abstract class FederationEvalStrategy extends StrictEvaluationStrategy {
 	protected SourceSelectionCache cache;
 
 	protected FederationContext federationContext;
+
+	/**
+	 * List of standard {@link QueryOptimizer}s applicable to federation
+	 */
+	private static final List<QueryOptimizer> standardOptimizers = List.of(
+			StandardQueryOptimizerPipeline.BINDING_ASSIGNER,
+			StandardQueryOptimizerPipeline.BINDING_SET_ASSIGNMENT_INLINER,
+			StandardQueryOptimizerPipeline.DISJUNCTIVE_CONSTRAINT_OPTIMIZER);
 
 	public FederationEvalStrategy(FederationContext federationContext) {
 		super(new org.eclipse.rdf4j.query.algebra.evaluation.TripleSource() {
@@ -208,9 +220,11 @@ public abstract class FederationEvalStrategy extends StrictEvaluationStrategy {
 		}
 
 		/* original RDF4J optimizers */
-		new ConstantOptimizer(this).optimize(query, dataset, bindings); // maybe remove this optimizer later
+		for (QueryOptimizer optimizer : standardOptimizers) {
+			optimizer.optimize(query, dataset, bindings);
+		}
 
-		new DisjunctiveConstraintOptimizer().optimize(query, dataset, bindings);
+		new ConstantOptimizer(this).optimize(query, dataset, bindings); // maybe remove this optimizer later
 
 		/*
 		 * TODO add some generic optimizers: - FILTER ?s=1 && ?s=2 => EmptyResult - Remove variables that are not
@@ -561,7 +575,7 @@ public abstract class FederationEvalStrategy extends StrictEvaluationStrategy {
 			IRI pred, Value obj, Resource... contexts)
 			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
 
-		List<Endpoint> members = federationContext.getFederation().getMembers();
+		List<Endpoint> members = getAccessibleFederationMembers(queryInfo);
 
 		// a bound query: if at least one fed member provides results
 		// return the statement, otherwise empty result
@@ -602,6 +616,53 @@ public abstract class FederationEvalStrategy extends StrictEvaluationStrategy {
 		// TODO distinct iteration ?
 
 		return union;
+	}
+
+	/**
+	 * Returns true if the federation has statements
+	 *
+	 * @param queryInfo information about the query
+	 * @param subj      the subject or <code>null</code>
+	 * @param pred      the predicate or <code>null</code>
+	 * @param obj       the object or <code>null</code>
+	 * @param contexts  optional list of contexts
+	 * @return the statement iteration
+	 *
+	 * @throws RepositoryException
+	 * @throws MalformedQueryException
+	 * @throws QueryEvaluationException
+	 */
+	public boolean hasStatements(QueryInfo queryInfo, Resource subj,
+			IRI pred, Value obj, Resource... contexts)
+			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
+
+		List<Endpoint> members = getAccessibleFederationMembers(queryInfo);
+
+		// form the union of results from relevant endpoints
+		List<StatementSource> sources = CacheUtils.checkCacheForStatementSourcesUpdateCache(cache, members, subj, pred,
+				obj, queryInfo, contexts);
+
+		if (sources.isEmpty()) {
+			return false;
+		}
+
+		return true;
+	}
+
+	/**
+	 * Returns the accessible federation members in the context of the query. By default this is all federation members.
+	 * <p>
+	 * Specialized implementations of the {@link FederationEvalStrategy} may override and define custom behavior (e.g.,
+	 * to support resilience).
+	 * </p>
+	 *
+	 *
+	 * @param queryInfo
+	 * @return
+	 */
+	@Experimental
+	protected List<Endpoint> getAccessibleFederationMembers(QueryInfo queryInfo) {
+		return federationContext.getFederation().getMembers();
 	}
 
 	public CloseableIteration<BindingSet> evaluateService(FedXService service,
@@ -748,10 +809,7 @@ public abstract class FederationEvalStrategy extends StrictEvaluationStrategy {
 
 				if (problemVars.containsAll(bindings.getBindingNames())) {
 					var leftIter = leftPrepared.evaluate(bindings);
-					ControlledWorkerLeftJoin join = new ControlledWorkerLeftJoin(scheduler, FederationEvalStrategy.this,
-							leftIter, leftJoin, bindings, leftJoin.getQueryInfo());
-					executor.execute(join);
-					return join;
+					return executeLeftJoin(scheduler, leftIter, leftJoin, bindings, leftJoin.getQueryInfo());
 				} else {
 					Set<String> problemVarsClone = new HashSet<>(problemVars);
 					problemVarsClone.retainAll(bindings.getBindingNames());
@@ -815,8 +873,14 @@ public abstract class FederationEvalStrategy extends StrictEvaluationStrategy {
 	/**
 	 * Execute the join in a separate thread using some join executor.
 	 *
-	 * Join executors are for instance: - {@link SynchronousJoin} - {@link SynchronousBoundJoin} -
-	 * {@link ControlledWorkerJoin} - {@link ControlledWorkerBoundJoin}
+	 * Join executors are for instance:
+	 *
+	 * <ul>
+	 * <li>{@link SynchronousJoin}</li>
+	 * <li>{@link SynchronousBoundJoin}</li>
+	 * <li>{@link ControlledWorkerJoin}</li>
+	 * <li>{@link ControlledWorkerBindJoin}</li>
+	 * </ul>
 	 *
 	 * For endpoint federation use controlled worker bound join, for local federation use controlled worker join. The
 	 * other operators are there for completeness.
@@ -835,6 +899,21 @@ public abstract class FederationEvalStrategy extends StrictEvaluationStrategy {
 			ControlledWorkerScheduler<BindingSet> joinScheduler,
 			CloseableIteration<BindingSet> leftIter, TupleExpr rightArg,
 			Set<String> joinVariables, BindingSet bindings, QueryInfo queryInfo) throws QueryEvaluationException;
+
+	/**
+	 * Execute the left join in a separate thread using some join executor.
+	 *
+	 * @param joinScheduler
+	 * @param leftIter
+	 * @param leftJoin
+	 * @param bindings
+	 * @return the result
+	 * @throws QueryEvaluationException
+	 */
+	protected abstract CloseableIteration<BindingSet> executeLeftJoin(
+			ControlledWorkerScheduler<BindingSet> joinScheduler,
+			CloseableIteration<BindingSet> leftIter, LeftJoin leftJoin,
+			BindingSet bindings, QueryInfo queryInfo) throws QueryEvaluationException;
 
 	public abstract CloseableIteration<BindingSet> evaluateExclusiveGroup(
 			ExclusiveGroup group, BindingSet bindings)
@@ -916,14 +995,66 @@ public abstract class FederationEvalStrategy extends StrictEvaluationStrategy {
 	 * @param bindings
 	 * @return the result iteration
 	 * @throws QueryEvaluationException
+	 * @deprecated with VALUES implementation, control flow goes via
+	 *             {@link #evaluateBoundJoinStatementPattern(StatementTupleExpr, List)}
 	 */
+	@Deprecated(forRemoval = true)
 	public abstract CloseableIteration<BindingSet> evaluateGroupedCheck(
 			CheckStatementPattern stmt, final List<BindingSet> bindings) throws QueryEvaluationException;
 
 	/**
+	 * Evaluate the left bind join for the given {@link StatementTupleExpr} and bindings at the relevant endpoints.
+	 *
+	 * @param stmt
+	 * @param bindings
+	 * @return the result iteration
+	 * @throws QueryEvaluationException
+	 * @see {@link BindLeftJoinIteration}
+	 */
+	public CloseableIteration<BindingSet> evaluateLeftBoundJoinStatementPattern(
+			StatementTupleExpr stmt, final List<BindingSet> bindings) throws QueryEvaluationException {
+
+		FilterValueExpr filterExpr = null;
+		if (stmt instanceof FilterTuple) {
+			filterExpr = ((FilterTuple) stmt).getFilterExpr();
+		}
+
+		AtomicBoolean isEvaluated = new AtomicBoolean(false);
+		String preparedQuery = QueryStringUtil.selectQueryStringBoundJoinVALUES((StatementPattern) stmt, bindings,
+				filterExpr, isEvaluated, stmt.getQueryInfo().getDataset());
+
+		CloseableIteration<BindingSet> result = null;
+		try {
+			result = evaluateAtStatementSources(preparedQuery, stmt.getStatementSources(), stmt.getQueryInfo());
+
+			// apply filter and/or convert to original bindings
+			if (filterExpr != null && !isEvaluated.get()) {
+				result = new BindLeftJoinIteration(result, bindings); // apply conversion
+				result = new FilteringIteration(filterExpr, result, this); // apply filter
+				if (!result.hasNext()) {
+					result.close();
+					return new EmptyIteration<>();
+				}
+			} else {
+				result = new BindLeftJoinIteration(result, bindings);
+			}
+
+			return result;
+		} catch (Throwable t) {
+			if (result != null) {
+				result.close();
+			}
+			if (t instanceof InterruptedException) {
+				Thread.currentThread().interrupt();
+			}
+			throw ExceptionUtil.toQueryEvaluationException(t);
+		}
+	}
+
+	/**
 	 * Evaluate a SERVICE using vectored evaluation, taking the provided bindings as input.
 	 *
-	 * See {@link ControlledWorkerBoundJoin} and {@link FedXConfig#getEnableServiceAsBoundJoin()}
+	 * See {@link ControlledWorkerBindJoin} and {@link FedXConfig#getEnableServiceAsBoundJoin()}
 	 *
 	 * @param service
 	 * @param bindings

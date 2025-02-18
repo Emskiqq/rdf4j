@@ -109,13 +109,20 @@ abstract public class AbstractShaclTest {
 	public static final Set<IRI> SHAPE_GRAPHS = Set.of(RDF4J.SHACL_SHAPE_GRAPH, RDF4J.NIL,
 			Values.iri("http://example.com/ns#shapesGraph1"));
 
+	public static final String INITIAL_DATA_FILE = "initialData.trig";
+
 	private static final Set<String> ignoredTestCases = Set.of(
 			"test-cases/path/oneOrMorePath",
+			"test-cases/nodeKind/oneOrMorePathComplex",
+			"test-cases/nodeKind/zeroOrMorePathComplex",
+			"test-cases/nodeKind/oneOrMorePathSimple",
+			"test-cases/minCount/oneOrMorePath",
 			"test-cases/path/zeroOrMorePath",
+			"test-cases/minCount/zeroOrMorePath",
 			"test-cases/path/zeroOrOnePath"
 
 	);
-	public static final Set<IsolationLevels> ISOLATION_LEVELS = Set.of(
+	public static final List<IsolationLevels> ISOLATION_LEVELS = List.of(
 			IsolationLevels.NONE,
 			IsolationLevels.SNAPSHOT,
 			IsolationLevels.SERIALIZABLE
@@ -222,7 +229,7 @@ abstract public class AbstractShaclTest {
 						if (files != null) {
 							Optional<String> initialData = Arrays.stream(files)
 									.map(File::getName)
-									.filter(name -> name.equals("initialData.ttl"))
+									.filter(name -> name.equals(INITIAL_DATA_FILE))
 									.findAny();
 							List<File> queries = Arrays.stream(files)
 									.filter(f -> f.getName().endsWith(".rq"))
@@ -311,7 +318,7 @@ abstract public class AbstractShaclTest {
 	}
 
 	@AfterEach
-	void tearDown() {
+	void afterEach() {
 		fullLogging = false;
 	}
 
@@ -553,13 +560,18 @@ abstract public class AbstractShaclTest {
 			return;
 		}
 
-		// uses rsx:nodeShape
+		// uses rsx:targetShape
 		if (testCase.testCasePath.startsWith("test-cases/qualifiedShape/complex/")) {
 			return;
 		}
 
-		// uses rsx:nodeShape
+		// uses rsx:targetShape
 		if (testCase.testCasePath.startsWith("test-cases/complex/targetShapeAndQualifiedShape/")) {
+			return;
+		}
+
+		// uses rsx:targetShape
+		if (testCase.testCasePath.startsWith("test-cases/path/sequencePathTargetShape")) {
 			return;
 		}
 
@@ -591,6 +603,17 @@ abstract public class AbstractShaclTest {
 		// the TopBraid SHACL API doesn't agree with other implementations on how sh:closed should work in a property
 		// shape
 		if (testCase.testCasePath.startsWith("test-cases/closed/notPropertyShape/")) {
+			return;
+		}
+
+		// the TopBraid SHACL API doesn't agree with other implementations on how multiple paths to the same target
+		// should work
+		if (testCase.testCasePath.startsWith("test-cases/nodeKind/simpleCompress/")) {
+			return;
+		}
+
+		// the TopBraid SHACL API doesn't support multiple data graphs
+		if (testCase.testCasePath.startsWith("test-cases/maxCount/simple/invalid/case4/")) {
 			return;
 		}
 
@@ -1061,7 +1084,13 @@ abstract public class AbstractShaclTest {
 			return;
 		}
 
-		SailRepository shaclRepository = getShaclSail(testCase);
+		SailRepository shaclRepository;
+		try {
+			shaclRepository = getShaclSail(testCase);
+		} catch (Exception e) {
+			System.err.println(testCase.getTestCasePath() + "shacl.trig");
+			throw e;
+		}
 		try {
 
 			List<ContextWithShape> shapes = ((ShaclSail) shaclRepository.getSail()).getCachedShapes()

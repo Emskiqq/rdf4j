@@ -236,16 +236,18 @@ public class PropertyShape extends Shape {
 					return new ValidationResult(t.getActiveTarget(), t.getValue(), this,
 							constraintComponent, getSeverity(), t.getScope(), t.getContexts(),
 							getContexts());
-				});
+				}, connectionsGroup);
 			}
 
 			if (scope == Scope.propertyShape) {
-				validationPlanNode = Unique.getInstance(new TargetChainPopper(validationPlanNode), true);
+				validationPlanNode = Unique.getInstance(new TargetChainPopper(validationPlanNode, connectionsGroup),
+						true, connectionsGroup);
 			} else {
-				validationPlanNode = Unique.getInstance(new ShiftToNodeShape(validationPlanNode), true);
+				validationPlanNode = Unique.getInstance(new ShiftToNodeShape(validationPlanNode, connectionsGroup),
+						true, connectionsGroup);
 			}
 
-			union = UnionNode.getInstance(union, validationPlanNode);
+			union = UnionNode.getInstance(connectionsGroup, union, validationPlanNode);
 		}
 
 		return union;
@@ -253,12 +255,13 @@ public class PropertyShape extends Shape {
 
 	@Override
 	public PlanNode getAllTargetsPlan(ConnectionsGroup connectionsGroup, Resource[] dataGraph, Scope scope,
-			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider) {
+			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider,
+			ValidationSettings validationSettings) {
 		PlanNode planNode = constraintComponents.stream()
 				.map(c -> c.getAllTargetsPlan(connectionsGroup, dataGraph, Scope.propertyShape,
-						new StatementMatcher.StableRandomVariableProvider()))
+						new StatementMatcher.StableRandomVariableProvider(), validationSettings))
 				.distinct()
-				.reduce(UnionNode::getInstanceDedupe)
+				.reduce((nodes, nodes2) -> UnionNode.getInstanceDedupe(connectionsGroup, nodes, nodes2))
 				.orElse(EmptyNode.getInstance());
 
 		if (connectionsGroup.getStats().hasRemoved()) {
@@ -267,16 +270,16 @@ public class PropertyShape extends Shape {
 							stableRandomVariableProvider)
 					.getPlanNode(connectionsGroup, dataGraph, Scope.propertyShape, true, null);
 
-			planNode = UnionNode.getInstanceDedupe(planNode, planNodeEffectiveTarget);
+			planNode = UnionNode.getInstanceDedupe(connectionsGroup, planNode, planNodeEffectiveTarget);
 		}
 
 		if (scope == Scope.propertyShape) {
-			planNode = Unique.getInstance(new TargetChainPopper(planNode), true);
+			planNode = Unique.getInstance(new TargetChainPopper(planNode, connectionsGroup), true, connectionsGroup);
 		} else {
-			planNode = new ShiftToNodeShape(planNode);
+			planNode = new ShiftToNodeShape(planNode, connectionsGroup);
 		}
 
-		planNode = Unique.getInstance(planNode, false);
+		planNode = Unique.getInstance(planNode, false, connectionsGroup);
 
 		return planNode;
 	}

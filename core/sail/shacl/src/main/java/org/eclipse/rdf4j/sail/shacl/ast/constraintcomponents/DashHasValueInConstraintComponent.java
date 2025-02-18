@@ -31,6 +31,7 @@ import org.eclipse.rdf4j.sail.shacl.ast.SparqlFragment;
 import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher;
 import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher.Variable;
 import org.eclipse.rdf4j.sail.shacl.ast.paths.Path;
+import org.eclipse.rdf4j.sail.shacl.ast.planNodes.AbstractBulkJoinPlanNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.BulkedExternalLeftOuterJoin;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.EmptyNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.GroupByFilter;
@@ -112,14 +113,14 @@ public class DashHasValueInConstraintComponent extends AbstractConstraintCompone
 					path.getTargetQueryFragment(new StatementMatcher.Variable("a"), new StatementMatcher.Variable("c"),
 							connectionsGroup.getRdfsSubClassOfReasoner(), stableRandomVariableProvider, Set.of()),
 					(b) -> new ValidationTuple(b.getValue("a"), b.getValue("c"), scope, true,
-							validationSettings.getDataGraph())
-			);
+							validationSettings.getDataGraph()),
+					connectionsGroup, AbstractBulkJoinPlanNode.DEFAULT_VARS);
 
 			PlanNode invalidTargets = new GroupByFilter(joined, group -> {
 				return group.stream().map(ValidationTuple::getValue).noneMatch(hasValueIn::contains);
-			});
+			}, connectionsGroup);
 
-			return Unique.getInstance(new TrimToTarget(invalidTargets), false);
+			return Unique.getInstance(new TrimToTarget(invalidTargets, connectionsGroup), false, connectionsGroup);
 
 		} else if (scope == Scope.nodeShape) {
 
@@ -136,7 +137,7 @@ public class DashHasValueInConstraintComponent extends AbstractConstraintCompone
 						null);
 			}
 
-			PlanNode falseNode = new ValueInFilter(addedTargets, hasValueIn)
+			PlanNode falseNode = new ValueInFilter(addedTargets, hasValueIn, connectionsGroup)
 					.getFalseNode(UnBufferedPlanNode.class);
 
 			return falseNode;
@@ -149,14 +150,16 @@ public class DashHasValueInConstraintComponent extends AbstractConstraintCompone
 
 	@Override
 	public PlanNode getAllTargetsPlan(ConnectionsGroup connectionsGroup, Resource[] dataGraph, Scope scope,
-			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider) {
+			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider,
+			ValidationSettings validationSettings) {
 		if (scope == Scope.propertyShape) {
 			PlanNode allTargetsPlan = getTargetChain()
 					.getEffectiveTarget(Scope.nodeShape, connectionsGroup.getRdfsSubClassOfReasoner(),
 							stableRandomVariableProvider)
 					.getPlanNode(connectionsGroup, dataGraph, Scope.nodeShape, true, null);
 
-			return Unique.getInstance(new ShiftToPropertyShape(allTargetsPlan), true);
+			return Unique.getInstance(new ShiftToPropertyShape(allTargetsPlan, connectionsGroup), true,
+					connectionsGroup);
 		}
 		return EmptyNode.getInstance();
 	}

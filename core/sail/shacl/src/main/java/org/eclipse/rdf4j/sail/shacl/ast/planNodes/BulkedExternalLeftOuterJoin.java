@@ -12,6 +12,7 @@
 package org.eclipse.rdf4j.sail.shacl.ast.planNodes;
 
 import java.util.ArrayDeque;
+import java.util.List;
 import java.util.Objects;
 import java.util.function.Function;
 
@@ -21,10 +22,11 @@ import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.Dataset;
 import org.eclipse.rdf4j.query.algebra.TupleExpr;
+import org.eclipse.rdf4j.query.algebra.evaluation.iterator.PeekMarkIterator;
 import org.eclipse.rdf4j.sail.SailConnection;
-import org.eclipse.rdf4j.sail.memory.MemoryStoreConnection;
 import org.eclipse.rdf4j.sail.shacl.ast.SparqlFragment;
 import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher;
+import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
 
 /**
  * @author Håvard Ottestad
@@ -44,12 +46,13 @@ public class BulkedExternalLeftOuterJoin extends AbstractBulkJoinPlanNode {
 
 	public BulkedExternalLeftOuterJoin(PlanNode leftNode, SailConnection connection, Resource[] dataGraph,
 			SparqlFragment query,
-			Function<BindingSet, ValidationTuple> mapper) {
-		super();
-		leftNode = PlanNodeHelper.handleSorting(this, leftNode);
+			Function<BindingSet, ValidationTuple> mapper, ConnectionsGroup connectionsGroup,
+			List<StatementMatcher.Variable> vars) {
+		super(vars);
+		leftNode = PlanNodeHelper.handleSorting(this, leftNode, connectionsGroup);
 		this.leftNode = leftNode;
 		this.query = query.getNamespacesForSparql()
-				+ StatementMatcher.StableRandomVariableProvider.normalize(query.getFragment());
+				+ StatementMatcher.StableRandomVariableProvider.normalize(query.getFragment(), List.of(), List.of());
 		this.connection = connection;
 		assert this.connection != null;
 		this.mapper = mapper;
@@ -64,13 +67,13 @@ public class BulkedExternalLeftOuterJoin extends AbstractBulkJoinPlanNode {
 			ArrayDeque<ValidationTuple> left;
 			ArrayDeque<ValidationTuple> right;
 
-			private CloseableIteration<? extends ValidationTuple> leftNodeIterator;
+			private PeekMarkIterator<? extends ValidationTuple> leftNodeIterator;
 
 			@Override
 			protected void init() {
 				left = new ArrayDeque<>(BULK_SIZE);
 				right = new ArrayDeque<>(BULK_SIZE);
-				leftNodeIterator = leftNode.iterator();
+				leftNodeIterator = new PeekMarkIterator<>(leftNode.iterator());
 			}
 
 			private void calculateNext() {
@@ -80,6 +83,15 @@ public class BulkedExternalLeftOuterJoin extends AbstractBulkJoinPlanNode {
 				}
 
 				while (left.size() < BULK_SIZE && leftNodeIterator.hasNext()) {
+					if (!left.isEmpty()) {
+						ValidationTuple peek = leftNodeIterator.peek();
+						if (peek.sameTargetAs(left.getFirst())) {
+							// stop if we detect a duplicate target since we only support distinct targets on the left
+							// side of the join
+							assert false : "Current and next left target is the same: " + peek + " " + left.getFirst();
+							break;
+						}
+					}
 					left.addFirst(leftNodeIterator.next());
 				}
 
@@ -172,13 +184,13 @@ public class BulkedExternalLeftOuterJoin extends AbstractBulkJoinPlanNode {
 
 		// added/removed connections are always newly minted per plan node, so we instead need to compare the underlying
 		// sail
-		if (connection instanceof MemoryStoreConnection) {
-			stringBuilder.append(System.identityHashCode(((MemoryStoreConnection) connection).getSail()) + " -> "
-					+ getId() + " [label=\"right\"]").append("\n");
-		} else {
-			stringBuilder.append(System.identityHashCode(connection) + " -> " + getId() + " [label=\"right\"]")
-					.append("\n");
-		}
+//		if (connection instanceof MemoryStoreConnection) {
+//			stringBuilder.append(System.identityHashCode(((MemoryStoreConnection) connection).getSail()) + " -> "
+//					+ getId() + " [label=\"right\"]").append("\n");
+//		} else {
+		stringBuilder.append(System.identityHashCode(connection) + " -> " + getId() + " [label=\"right\"]")
+				.append("\n");
+//		}
 
 		stringBuilder.append(leftNode.getId() + " -> " + getId() + " [label=\"left\"]").append("\n");
 

@@ -32,9 +32,10 @@ import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher.Variable;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.FilterPlanNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.LanguageInFilter;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.PlanNode;
+import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
 import org.eclipse.rdf4j.sail.shacl.wrapper.shape.ShapeSource;
 
-public class LanguageInConstraintComponent extends SimpleAbstractConstraintComponent {
+public class LanguageInConstraintComponent extends AbstractSimpleConstraintComponent {
 
 	private final List<String> languageIn;
 	private final ArrayList<String> languageRanges;
@@ -103,8 +104,8 @@ public class LanguageInConstraintComponent extends SimpleAbstractConstraintCompo
 	}
 
 	@Override
-	Function<PlanNode, FilterPlanNode> getFilterAttacher() {
-		return (parent) -> new LanguageInFilter(parent, lowerCaseLanguageIn, languageRanges);
+	Function<PlanNode, FilterPlanNode> getFilterAttacher(ConnectionsGroup connectionsGroup) {
+		return (parent) -> new LanguageInFilter(parent, lowerCaseLanguageIn, languageRanges, connectionsGroup);
 	}
 
 	@Override

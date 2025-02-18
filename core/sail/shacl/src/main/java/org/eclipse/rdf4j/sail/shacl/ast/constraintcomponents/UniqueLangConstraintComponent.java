@@ -27,6 +27,7 @@ import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher;
 import org.eclipse.rdf4j.sail.shacl.ast.ValidationApproach;
 import org.eclipse.rdf4j.sail.shacl.ast.ValidationQuery;
 import org.eclipse.rdf4j.sail.shacl.ast.paths.Path;
+import org.eclipse.rdf4j.sail.shacl.ast.planNodes.AbstractBulkJoinPlanNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.BulkedExternalInnerJoin;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.EmptyNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.InnerJoin;
@@ -120,7 +121,7 @@ public class UniqueLangConstraintComponent extends AbstractConstraintComponent {
 				connectionsGroup.getRdfsSubClassOfReasoner(), stableRandomVariableProvider);
 		Optional<Path> path = getTargetChain().getPath();
 
-		if (!path.isPresent() || scope != Scope.propertyShape) {
+		if (path.isEmpty() || scope != Scope.propertyShape) {
 			throw new IllegalStateException("UniqueLang only operates on paths");
 		}
 
@@ -140,12 +141,12 @@ public class UniqueLangConstraintComponent extends AbstractConstraintComponent {
 									Set.of()),
 					false,
 					null,
-					BulkedExternalInnerJoin.getMapper("a", "c", scope, validationSettings.getDataGraph())
+					BulkedExternalInnerJoin.getMapper("a", "c", scope, validationSettings.getDataGraph()),
 
-			);
+					connectionsGroup, AbstractBulkJoinPlanNode.DEFAULT_VARS);
 
-			PlanNode nonUniqueTargetLang = new NonUniqueTargetLang(relevantTargetsWithPath);
-			return Unique.getInstance(new TrimToTarget(nonUniqueTargetLang), false);
+			PlanNode nonUniqueTargetLang = new NonUniqueTargetLang(relevantTargetsWithPath, connectionsGroup);
+			return Unique.getInstance(new TrimToTarget(nonUniqueTargetLang, connectionsGroup), false, connectionsGroup);
 		}
 
 		if (connectionsGroup.getStats().wasEmptyBeforeTransaction()) {
@@ -154,10 +155,11 @@ public class UniqueLangConstraintComponent extends AbstractConstraintComponent {
 
 			PlanNode addedByPath = path.get().getAllAdded(connectionsGroup, validationSettings.getDataGraph(), null);
 
-			PlanNode innerJoin = new InnerJoin(addedTargets, addedByPath).getJoined(UnBufferedPlanNode.class);
+			PlanNode innerJoin = new InnerJoin(addedTargets, addedByPath, connectionsGroup)
+					.getJoined(UnBufferedPlanNode.class);
 
-			PlanNode nonUniqueTargetLang = new NonUniqueTargetLang(innerJoin);
-			return Unique.getInstance(new TrimToTarget(nonUniqueTargetLang), false);
+			PlanNode nonUniqueTargetLang = new NonUniqueTargetLang(innerJoin, connectionsGroup);
+			return Unique.getInstance(new TrimToTarget(nonUniqueTargetLang, connectionsGroup), false, connectionsGroup);
 		}
 
 		PlanNode addedTargets = effectiveTarget.getPlanNode(connectionsGroup, validationSettings.getDataGraph(), scope,
@@ -166,17 +168,18 @@ public class UniqueLangConstraintComponent extends AbstractConstraintComponent {
 		PlanNode addedByPath = path.get().getAllAdded(connectionsGroup, validationSettings.getDataGraph(), null);
 
 		addedByPath = effectiveTarget.getTargetFilter(connectionsGroup,
-				validationSettings.getDataGraph(), Unique.getInstance(new TrimToTarget(addedByPath), false));
+				validationSettings.getDataGraph(),
+				Unique.getInstance(new TrimToTarget(addedByPath, connectionsGroup), false, connectionsGroup));
 
 		addedByPath = effectiveTarget.extend(addedByPath, connectionsGroup, validationSettings.getDataGraph(), scope,
 				EffectiveTarget.Extend.left, false,
 				null);
 
-		PlanNode mergeNode = UnionNode.getInstance(addedTargets, addedByPath);
+		PlanNode mergeNode = UnionNode.getInstance(connectionsGroup, addedTargets, addedByPath);
 
-		mergeNode = new TrimToTarget(mergeNode);
+		mergeNode = new TrimToTarget(mergeNode, connectionsGroup);
 
-		PlanNode allRelevantTargets = Unique.getInstance(mergeNode, false);
+		PlanNode allRelevantTargets = Unique.getInstance(mergeNode, false, connectionsGroup);
 
 		PlanNode relevantTargetsWithPath = new BulkedExternalInnerJoin(
 				allRelevantTargets,
@@ -186,26 +189,27 @@ public class UniqueLangConstraintComponent extends AbstractConstraintComponent {
 								connectionsGroup.getRdfsSubClassOfReasoner(), stableRandomVariableProvider, Set.of()),
 				false,
 				null,
-				BulkedExternalInnerJoin.getMapper("a", "c", scope, validationSettings.getDataGraph())
+				BulkedExternalInnerJoin.getMapper("a", "c", scope, validationSettings.getDataGraph()),
+				connectionsGroup, AbstractBulkJoinPlanNode.DEFAULT_VARS);
 
-		);
+		PlanNode nonUniqueTargetLang = new NonUniqueTargetLang(relevantTargetsWithPath, connectionsGroup);
 
-		PlanNode nonUniqueTargetLang = new NonUniqueTargetLang(relevantTargetsWithPath);
-
-		return Unique.getInstance(new TrimToTarget(nonUniqueTargetLang), false);
+		return Unique.getInstance(new TrimToTarget(nonUniqueTargetLang, connectionsGroup), false, connectionsGroup);
 
 	}
 
 	@Override
 	public PlanNode getAllTargetsPlan(ConnectionsGroup connectionsGroup, Resource[] dataGraph, Scope scope,
-			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider) {
+			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider,
+			ValidationSettings validationSettings) {
 		if (scope == Scope.propertyShape) {
 			PlanNode allTargetsPlan = getTargetChain()
 					.getEffectiveTarget(Scope.nodeShape, connectionsGroup.getRdfsSubClassOfReasoner(),
 							stableRandomVariableProvider)
 					.getPlanNode(connectionsGroup, dataGraph, Scope.nodeShape, true, null);
 
-			return Unique.getInstance(new ShiftToPropertyShape(allTargetsPlan), true);
+			return Unique.getInstance(new ShiftToPropertyShape(allTargetsPlan, connectionsGroup), true,
+					connectionsGroup);
 		}
 		return EmptyNode.getInstance();
 	}

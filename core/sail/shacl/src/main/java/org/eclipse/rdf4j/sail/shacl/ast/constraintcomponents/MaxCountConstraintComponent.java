@@ -32,6 +32,7 @@ import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher;
 import org.eclipse.rdf4j.sail.shacl.ast.ValidationApproach;
 import org.eclipse.rdf4j.sail.shacl.ast.ValidationQuery;
 import org.eclipse.rdf4j.sail.shacl.ast.paths.Path;
+import org.eclipse.rdf4j.sail.shacl.ast.planNodes.AbstractBulkJoinPlanNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.BulkedExternalInnerJoin;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.BulkedExternalLeftOuterJoin;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.EmptyNode;
@@ -44,8 +45,19 @@ import org.eclipse.rdf4j.sail.shacl.ast.planNodes.Unique;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.ValidationTuple;
 import org.eclipse.rdf4j.sail.shacl.ast.targets.EffectiveTarget;
 import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class MaxCountConstraintComponent extends AbstractConstraintComponent {
+
+	private static final Logger logger = LoggerFactory.getLogger(MaxCountConstraintComponent.class);
+
+	// Performance degrades quickly as the maxCount increases when using a SPARQL Validation Approach. The default is 5,
+	// but it can be tuned using the system property below.
+	private static final String SPARQL_VALIDATION_APPROACH_LIMIT_PROPERTY = "org.eclipse.rdf4j.sail.shacl.ast.constraintcomponents.MaxCountConstraintComponent.sparqlValidationApproachLimit";
+	public static long SPARQL_VALIDATION_APPROACH_LIMIT = System
+			.getProperty(SPARQL_VALIDATION_APPROACH_LIMIT_PROPERTY) == null ? 1
+					: Long.parseLong(System.getProperty(SPARQL_VALIDATION_APPROACH_LIMIT_PROPERTY));
 
 	private final long maxCount;
 
@@ -85,7 +97,7 @@ public class MaxCountConstraintComponent extends AbstractConstraintComponent {
 					effectiveTarget, path.get(), false);
 		}
 
-		mergeNode = Unique.getInstance(new TrimToTarget(mergeNode), false);
+		mergeNode = Unique.getInstance(new TrimToTarget(mergeNode, connectionsGroup), false, connectionsGroup);
 
 		PlanNode relevantTargetsWithPath;
 
@@ -101,8 +113,8 @@ public class MaxCountConstraintComponent extends AbstractConstraintComponent {
 									Set.of()),
 					false,
 					null,
-					BulkedExternalInnerJoin.getMapper("a", "c", scope, validationSettings.getDataGraph())
-			);
+					BulkedExternalInnerJoin.getMapper("a", "c", scope, validationSettings.getDataGraph()),
+					connectionsGroup, AbstractBulkJoinPlanNode.DEFAULT_VARS);
 		} else {
 			relevantTargetsWithPath = new BulkedExternalLeftOuterJoin(
 					mergeNode,
@@ -114,28 +126,31 @@ public class MaxCountConstraintComponent extends AbstractConstraintComponent {
 									connectionsGroup.getRdfsSubClassOfReasoner(), stableRandomVariableProvider,
 									Set.of()),
 					(b) -> new ValidationTuple(b.getValue("a"), b.getValue("c"), scope, true,
-							validationSettings.getDataGraph())
-			);
+							validationSettings.getDataGraph()),
+					connectionsGroup, AbstractBulkJoinPlanNode.DEFAULT_VARS);
 		}
 
 		relevantTargetsWithPath = connectionsGroup.getCachedNodeFor(relevantTargetsWithPath);
 
-		PlanNode groupByCount = new GroupByCountFilter(relevantTargetsWithPath, count -> count > maxCount);
+		PlanNode groupByCount = new GroupByCountFilter(relevantTargetsWithPath, count -> count > maxCount,
+				connectionsGroup);
 
-		return Unique.getInstance(new TrimToTarget(groupByCount), false);
+		return Unique.getInstance(new TrimToTarget(groupByCount, connectionsGroup), false, connectionsGroup);
 
 	}
 
 	@Override
 	public PlanNode getAllTargetsPlan(ConnectionsGroup connectionsGroup, Resource[] dataGraph, Scope scope,
-			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider) {
+			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider,
+			ValidationSettings validationSettings) {
 		if (scope == Scope.propertyShape) {
 			PlanNode allTargetsPlan = getTargetChain()
 					.getEffectiveTarget(Scope.nodeShape, connectionsGroup.getRdfsSubClassOfReasoner(),
 							stableRandomVariableProvider)
 					.getPlanNode(connectionsGroup, dataGraph, Scope.nodeShape, true, null);
 
-			return Unique.getInstance(new ShiftToPropertyShape(allTargetsPlan), true);
+			return Unique.getInstance(new ShiftToPropertyShape(allTargetsPlan, connectionsGroup), true,
+					connectionsGroup);
 		}
 		return EmptyNode.getInstance();
 	}
@@ -216,8 +231,12 @@ public class MaxCountConstraintComponent extends AbstractConstraintComponent {
 
 	@Override
 	public ValidationApproach getOptimalBulkValidationApproach() {
-		// performance of large maxCount is terrible
-		if (maxCount > 5) {
+		if (maxCount > SPARQL_VALIDATION_APPROACH_LIMIT) {
+			if (logger.isDebugEnabled()) {
+				logger.debug(
+						"maxCount is {}, which is greater than the limit of {}, using ValidationApproach.Transactional instead of ValidationApproach.SPARQL for {}",
+						maxCount, SPARQL_VALIDATION_APPROACH_LIMIT, stringRepresentationOfValue(getId()));
+			}
 			return ValidationApproach.Transactional;
 		}
 		return ValidationApproach.SPARQL;
@@ -244,6 +263,6 @@ public class MaxCountConstraintComponent extends AbstractConstraintComponent {
 
 	@Override
 	public int hashCode() {
-		return (int) (maxCount ^ (maxCount >>> 32)) + "MaxCountConstraintComponent".hashCode();
+		return Long.hashCode(maxCount) + "MaxCountConstraintComponent".hashCode();
 	}
 }

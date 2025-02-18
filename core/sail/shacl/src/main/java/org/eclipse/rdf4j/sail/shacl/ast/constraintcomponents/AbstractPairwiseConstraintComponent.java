@@ -89,7 +89,9 @@ abstract class AbstractPairwiseConstraintComponent extends AbstractConstraintCom
 						validationSettings,
 						effectiveTarget);
 
-				allTargets = Unique.getInstance(UnionNode.getInstance(allTargets, allTargetsBasedOnPredicate), false);
+				allTargets = Unique.getInstance(
+						UnionNode.getInstance(connectionsGroup, allTargets, allTargetsBasedOnPredicate), false,
+						connectionsGroup);
 
 			} else {
 				allTargets = effectiveTarget.getPlanNode(connectionsGroup, validationSettings.getDataGraph(), scope,
@@ -99,7 +101,9 @@ abstract class AbstractPairwiseConstraintComponent extends AbstractConstraintCom
 						validationSettings,
 						effectiveTarget);
 
-				allTargets = Unique.getInstance(UnionNode.getInstance(allTargets, allTargetsBasedOnPredicate), false);
+				allTargets = Unique.getInstance(
+						UnionNode.getInstance(connectionsGroup, allTargets, allTargetsBasedOnPredicate), false,
+						connectionsGroup);
 			}
 
 		}
@@ -151,19 +155,21 @@ abstract class AbstractPairwiseConstraintComponent extends AbstractConstraintCom
 		PlanNode targetFilter2 = effectiveTarget.getTargetFilter(connectionsGroup, validationSettings.getDataGraph(),
 				removedByPredicate);
 
-		return Unique.getInstance(UnionNode.getInstance(targetFilter1, targetFilter2), false);
+		return Unique.getInstance(UnionNode.getInstance(connectionsGroup, targetFilter1, targetFilter2), false,
+				connectionsGroup);
 	}
 
 	@Override
 	public PlanNode getAllTargetsPlan(ConnectionsGroup connectionsGroup, Resource[] dataGraph, Scope scope,
-			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider) {
+			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider,
+			ValidationSettings validationSettings) {
 		if (scope == Scope.propertyShape) {
 			PlanNode allTargetsPlan = getTargetChain()
 					.getEffectiveTarget(Scope.nodeShape, connectionsGroup.getRdfsSubClassOfReasoner(),
 							stableRandomVariableProvider)
 					.getPlanNode(connectionsGroup, dataGraph, Scope.nodeShape, true, null);
 
-			allTargetsPlan = new ShiftToPropertyShape(allTargetsPlan);
+			allTargetsPlan = new ShiftToPropertyShape(allTargetsPlan, connectionsGroup);
 
 			// removed statements that match predicate could affect sh:or
 			if (connectionsGroup.getStats().hasRemoved()) {
@@ -181,7 +187,7 @@ abstract class AbstractPairwiseConstraintComponent extends AbstractConstraintCom
 								EffectiveTarget.Extend.left,
 								false,
 								null);
-				allTargetsPlan = UnionNode.getInstanceDedupe(allTargetsPlan, deletedPredicates);
+				allTargetsPlan = UnionNode.getInstanceDedupe(connectionsGroup, allTargetsPlan, deletedPredicates);
 			}
 
 			// added statements that match predicate could affect sh:not
@@ -200,10 +206,10 @@ abstract class AbstractPairwiseConstraintComponent extends AbstractConstraintCom
 								EffectiveTarget.Extend.left,
 								false,
 								null);
-				allTargetsPlan = UnionNode.getInstanceDedupe(allTargetsPlan, addedPredicates);
+				allTargetsPlan = UnionNode.getInstanceDedupe(connectionsGroup, allTargetsPlan, addedPredicates);
 			}
 
-			return Unique.getInstance(new TrimToTarget(allTargetsPlan), false);
+			return Unique.getInstance(new TrimToTarget(allTargetsPlan, connectionsGroup), false, connectionsGroup);
 		} else {
 			assert scope == Scope.nodeShape;
 
@@ -224,7 +230,7 @@ abstract class AbstractPairwiseConstraintComponent extends AbstractConstraintCom
 						.extend(deletedPredicates, connectionsGroup, dataGraph, Scope.nodeShape,
 								EffectiveTarget.Extend.left,
 								false, null);
-				allTargetsPlan = UnionNode.getInstanceDedupe(allTargetsPlan, deletedPredicates);
+				allTargetsPlan = UnionNode.getInstanceDedupe(connectionsGroup, allTargetsPlan, deletedPredicates);
 
 			}
 
@@ -243,11 +249,11 @@ abstract class AbstractPairwiseConstraintComponent extends AbstractConstraintCom
 						.extend(addedPredicates, connectionsGroup, dataGraph, Scope.nodeShape,
 								EffectiveTarget.Extend.left,
 								false, null);
-				allTargetsPlan = UnionNode.getInstanceDedupe(allTargetsPlan, addedPredicates);
+				allTargetsPlan = UnionNode.getInstanceDedupe(connectionsGroup, allTargetsPlan, addedPredicates);
 
 			}
 
-			return Unique.getInstance(allTargetsPlan, false);
+			return Unique.getInstance(new TrimToTarget(allTargetsPlan, connectionsGroup), false, connectionsGroup);
 
 		}
 

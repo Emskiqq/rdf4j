@@ -29,6 +29,8 @@ import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher.Variable;
 import org.eclipse.rdf4j.sail.shacl.ast.ValidationApproach;
 import org.eclipse.rdf4j.sail.shacl.ast.ValidationQuery;
 import org.eclipse.rdf4j.sail.shacl.ast.paths.Path;
+import org.eclipse.rdf4j.sail.shacl.ast.planNodes.AbstractBulkJoinPlanNode;
+import org.eclipse.rdf4j.sail.shacl.ast.planNodes.AllTargetsPlanNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.BufferedSplitter;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.BulkedExternalInnerJoin;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.EmptyNode;
@@ -85,22 +87,44 @@ public class ClassConstraintComponent extends AbstractConstraintComponent {
 			PlanNode addedTargets;
 
 			if (overrideTargetNode != null) {
-				addedTargets = effectiveTarget.extend(overrideTargetNode.getPlanNode(), connectionsGroup,
-						validationSettings.getDataGraph(), scope,
-						EffectiveTarget.Extend.right,
-						false, null);
+				PlanNode planNode = overrideTargetNode.getPlanNode();
+				if (planNode instanceof AllTargetsPlanNode) {
+					// We are cheating a bit here by retrieving all the targets and values at the same time by
+					// pretending to be in node shape scope and then shifting the results back to property shape scope
+					PlanNode allTargets = getTargetChain()
+							.getEffectiveTarget(Scope.nodeShape,
+									connectionsGroup.getRdfsSubClassOfReasoner(), stableRandomVariableProvider)
+							.getAllTargets(connectionsGroup, validationSettings.getDataGraph(), Scope.nodeShape);
+					allTargets = new ShiftToPropertyShape(allTargets, connectionsGroup);
+
+					// filter by type against the base sail
+					allTargets = new FilterByPredicateObject(
+							connectionsGroup.getBaseConnection(),
+							validationSettings.getDataGraph(), RDF.TYPE, clazzSet,
+							allTargets, false, FilterByPredicateObject.FilterOn.value, true, connectionsGroup);
+
+					return allTargets;
+
+				} else {
+					addedTargets = effectiveTarget.extend(planNode, connectionsGroup,
+							validationSettings.getDataGraph(), scope,
+							EffectiveTarget.Extend.right,
+							false, null);
+				}
 
 			} else {
-				BufferedSplitter addedTargetsBufferedSplitter = new BufferedSplitter(
+				BufferedSplitter addedTargetsBufferedSplitter = BufferedSplitter.getInstance(
 						effectiveTarget.getPlanNode(connectionsGroup, validationSettings.getDataGraph(), scope, false,
 								null));
 				addedTargets = addedTargetsBufferedSplitter.getPlanNode();
 				PlanNode addedByPath = path.getAllAdded(connectionsGroup, validationSettings.getDataGraph(), null);
 
 				addedByPath = effectiveTarget.getTargetFilter(connectionsGroup,
-						validationSettings.getDataGraph(), Unique.getInstance(new TrimToTarget(addedByPath), false));
+						validationSettings.getDataGraph(),
+						Unique.getInstance(new TrimToTarget(addedByPath, connectionsGroup), true, connectionsGroup));
 
-				addedByPath = new ReduceTargets(addedByPath, addedTargetsBufferedSplitter.getPlanNode());
+				addedByPath = new ReduceTargets(addedByPath, addedTargetsBufferedSplitter.getPlanNode(),
+						connectionsGroup);
 
 				addedByPath = effectiveTarget.extend(addedByPath, connectionsGroup, validationSettings.getDataGraph(),
 						scope,
@@ -124,12 +148,19 @@ public class ClassConstraintComponent extends AbstractConstraintComponent {
 									connectionsGroup.getRdfsSubClassOfReasoner(), stableRandomVariableProvider)
 							.getTargetFilter(connectionsGroup, validationSettings.getDataGraph(), deletedTypes);
 
-					addedTargets = UnionNode.getInstance(addedTargets,
-							new TrimToTarget(new ShiftToPropertyShape(deletedTypes)));
+					addedTargets = UnionNode.getInstance(connectionsGroup, addedTargets,
+							new TrimToTarget(new ShiftToPropertyShape(deletedTypes, connectionsGroup),
+									connectionsGroup));
 				}
 
-				addedTargets = UnionNode.getInstance(addedByPath, addedTargets);
-				addedTargets = Unique.getInstance(addedTargets, false);
+				addedTargets = UnionNode.getInstance(connectionsGroup, addedByPath, addedTargets);
+				addedTargets = Unique.getInstance(addedTargets, false, connectionsGroup);
+			}
+
+			int size = effectiveTarget.size();
+
+			if (size > 1) {
+				addedTargets = Unique.getInstance(addedTargets, true, connectionsGroup);
 			}
 
 			PlanNode falseNode = new BulkedExternalInnerJoin(
@@ -140,22 +171,22 @@ public class ClassConstraintComponent extends AbstractConstraintComponent {
 							connectionsGroup.getRdfsSubClassOfReasoner(), stableRandomVariableProvider, Set.of()),
 					false,
 					null,
-					BulkedExternalInnerJoin.getMapper("a", "c", scope, validationSettings.getDataGraph())
-			);
+					BulkedExternalInnerJoin.getMapper("a", "c", scope, validationSettings.getDataGraph()),
+					connectionsGroup, AbstractBulkJoinPlanNode.DEFAULT_VARS);
 
 			if (connectionsGroup.getAddedStatements() != null) {
 				// filter by type against the added statements
 				falseNode = new FilterByPredicateObject(
 						connectionsGroup.getAddedStatements(),
 						validationSettings.getDataGraph(), RDF.TYPE, clazzSet,
-						falseNode, false, FilterByPredicateObject.FilterOn.value, false);
+						falseNode, false, FilterByPredicateObject.FilterOn.value, false, connectionsGroup);
 			}
 
 			// filter by type against the base sail
 			falseNode = new FilterByPredicateObject(
 					connectionsGroup.getBaseConnection(),
 					validationSettings.getDataGraph(), RDF.TYPE, clazzSet,
-					falseNode, false, FilterByPredicateObject.FilterOn.value, true);
+					falseNode, false, FilterByPredicateObject.FilterOn.value, true, connectionsGroup);
 
 			return falseNode;
 
@@ -186,7 +217,7 @@ public class ClassConstraintComponent extends AbstractConstraintComponent {
 									stableRandomVariableProvider)
 							.extend(deletedTypes, connectionsGroup, validationSettings.getDataGraph(), scope,
 									EffectiveTarget.Extend.left, false, null);
-					addedTargets = UnionNode.getInstance(addedTargets, deletedTypes);
+					addedTargets = UnionNode.getInstance(connectionsGroup, addedTargets, deletedTypes);
 				}
 			}
 
@@ -194,7 +225,7 @@ public class ClassConstraintComponent extends AbstractConstraintComponent {
 			PlanNode falseNode = new FilterByPredicateObject(
 					connectionsGroup.getBaseConnection(),
 					validationSettings.getDataGraph(), RDF.TYPE, clazzSet,
-					addedTargets, false, FilterByPredicateObject.FilterOn.value, true);
+					addedTargets, false, FilterByPredicateObject.FilterOn.value, true, connectionsGroup);
 
 			return falseNode;
 
@@ -206,7 +237,8 @@ public class ClassConstraintComponent extends AbstractConstraintComponent {
 
 	@Override
 	public PlanNode getAllTargetsPlan(ConnectionsGroup connectionsGroup, Resource[] dataGraph, Scope scope,
-			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider) {
+			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider,
+			ValidationSettings validationSettings) {
 		if (scope == Scope.propertyShape) {
 			PlanNode allTargetsPlan = getTargetChain()
 					.getEffectiveTarget(Scope.nodeShape, connectionsGroup.getRdfsSubClassOfReasoner(),
@@ -228,7 +260,7 @@ public class ClassConstraintComponent extends AbstractConstraintComponent {
 						.extend(deletedTypes, connectionsGroup, dataGraph, Scope.nodeShape, EffectiveTarget.Extend.left,
 								false,
 								null);
-				allTargetsPlan = UnionNode.getInstanceDedupe(allTargetsPlan, deletedTypes);
+				allTargetsPlan = UnionNode.getInstanceDedupe(connectionsGroup, allTargetsPlan, deletedTypes);
 			}
 
 			// added type statements that match clazz could affect sh:not
@@ -246,10 +278,12 @@ public class ClassConstraintComponent extends AbstractConstraintComponent {
 						.extend(addedTypes, connectionsGroup, dataGraph, Scope.nodeShape, EffectiveTarget.Extend.left,
 								false,
 								null);
-				allTargetsPlan = UnionNode.getInstanceDedupe(allTargetsPlan, addedTypes);
+				allTargetsPlan = UnionNode.getInstanceDedupe(connectionsGroup, allTargetsPlan, addedTypes);
 			}
 
-			return Unique.getInstance(new TrimToTarget(new ShiftToPropertyShape(allTargetsPlan)), false);
+			return Unique.getInstance(
+					new TrimToTarget(new ShiftToPropertyShape(allTargetsPlan, connectionsGroup), connectionsGroup),
+					false, connectionsGroup);
 		}
 		PlanNode allTargetsPlan = EmptyNode.getInstance();
 
@@ -266,7 +300,7 @@ public class ClassConstraintComponent extends AbstractConstraintComponent {
 							stableRandomVariableProvider)
 					.extend(deletedTypes, connectionsGroup, dataGraph, Scope.nodeShape, EffectiveTarget.Extend.left,
 							false, null);
-			allTargetsPlan = UnionNode.getInstanceDedupe(allTargetsPlan, deletedTypes);
+			allTargetsPlan = UnionNode.getInstanceDedupe(connectionsGroup, allTargetsPlan, deletedTypes);
 
 		}
 
@@ -283,11 +317,11 @@ public class ClassConstraintComponent extends AbstractConstraintComponent {
 							stableRandomVariableProvider)
 					.extend(addedTypes, connectionsGroup, dataGraph, Scope.nodeShape, EffectiveTarget.Extend.left,
 							false, null);
-			allTargetsPlan = UnionNode.getInstanceDedupe(allTargetsPlan, addedTypes);
+			allTargetsPlan = UnionNode.getInstanceDedupe(connectionsGroup, allTargetsPlan, addedTypes);
 
 		}
 
-		return Unique.getInstance(allTargetsPlan, false);
+		return Unique.getInstance(allTargetsPlan, false, connectionsGroup);
 	}
 
 	@Override

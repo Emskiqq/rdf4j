@@ -26,12 +26,14 @@ import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher.Variable;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.FilterPlanNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.NodeKindFilter;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.PlanNode;
+import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
 
-public class NodeKindConstraintComponent extends SimpleAbstractConstraintComponent {
+public class NodeKindConstraintComponent extends AbstractSimpleConstraintComponent {
 
 	NodeKind nodeKind;
 
 	public NodeKindConstraintComponent(Resource nodeKind) {
+		super();
 		this.nodeKind = NodeKind.from(nodeKind);
 	}
 
@@ -74,8 +76,8 @@ public class NodeKindConstraintComponent extends SimpleAbstractConstraintCompone
 	}
 
 	@Override
-	Function<PlanNode, FilterPlanNode> getFilterAttacher() {
-		return (parent) -> new NodeKindFilter(parent, nodeKind);
+	Function<PlanNode, FilterPlanNode> getFilterAttacher(ConnectionsGroup connectionsGroup) {
+		return (parent) -> new NodeKindFilter(parent, nodeKind, connectionsGroup);
 	}
 
 	public enum NodeKind {

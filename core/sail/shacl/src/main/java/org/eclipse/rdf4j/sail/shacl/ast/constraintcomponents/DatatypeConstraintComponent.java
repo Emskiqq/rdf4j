@@ -28,13 +28,15 @@ import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher.Variable;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.DatatypeFilter;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.FilterPlanNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.PlanNode;
+import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
 
-public class DatatypeConstraintComponent extends SimpleAbstractConstraintComponent {
+public class DatatypeConstraintComponent extends AbstractSimpleConstraintComponent {
 
 	private final CoreDatatype coreDatatype;
 	private final IRI datatype;
 
 	public DatatypeConstraintComponent(IRI datatype) {
+		super();
 		this.datatype = datatype;
 		this.coreDatatype = CoreDatatype.from(datatype);
 	}
@@ -55,8 +57,8 @@ public class DatatypeConstraintComponent extends SimpleAbstractConstraintCompone
 	}
 
 	@Override
-	Function<PlanNode, FilterPlanNode> getFilterAttacher() {
-		return (parent) -> new DatatypeFilter(parent, datatype);
+	Function<PlanNode, FilterPlanNode> getFilterAttacher(ConnectionsGroup connectionsGroup) {
+		return (parent) -> new DatatypeFilter(parent, datatype, connectionsGroup);
 	}
 
 	@Override

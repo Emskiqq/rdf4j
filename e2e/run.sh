@@ -12,23 +12,45 @@
 
 set -e
 
-cd ..
-cd docker
-./run.sh
-./waitForDocker.sh
-cd ..
-cd e2e
+npm install
 
-sleep 10
+for APP_SERVER in tomcat jetty; do
+  export APP_SERVER
 
-if [ ! -d  'node_modules' ]; then
-  echo "npm ci"
-  npm ci
-fi
+  cd ..
+  cd docker
+  ./run.sh
+  ./waitForDocker.sh
+  cd ..
+  cd e2e
 
-docker ps
+  sleep 10
 
-npx playwright install --with-deps # install browsers
-npx playwright test
-exit $?
+  if [ ! -d  'node_modules' ]; then
+    echo "npm ci"
+    npm ci
+  fi
+
+  docker ps
+
+  npx playwright install --with-deps # install browsers
+  npx playwright test
+
+  status_npx=$?
+
+  cd ..
+  cd docker
+  ./shutdown.sh
+
+  # test for error code
+  if [ $status_npx -ne 0 ] ; then
+    echo "Error in E2E test for $APP_SERVER"
+    exit $status_npx
+  fi
+
+  echo "E2E test for $APP_SERVER OK"
+
+  # don't redo the whole build process just for making another docker image
+  export SKIP_BUILD="skip"
+done
 

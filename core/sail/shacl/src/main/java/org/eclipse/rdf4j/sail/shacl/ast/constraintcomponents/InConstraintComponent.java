@@ -29,9 +29,10 @@ import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher.Variable;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.FilterPlanNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.PlanNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.ValueInFilter;
+import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
 import org.eclipse.rdf4j.sail.shacl.wrapper.shape.ShapeSource;
 
-public class InConstraintComponent extends SimpleAbstractConstraintComponent {
+public class InConstraintComponent extends AbstractSimpleConstraintComponent {
 
 	private final Set<Value> in;
 
@@ -98,8 +99,8 @@ public class InConstraintComponent extends SimpleAbstractConstraintComponent {
 	}
 
 	@Override
-	Function<PlanNode, FilterPlanNode> getFilterAttacher() {
-		return (parent) -> new ValueInFilter(parent, in);
+	Function<PlanNode, FilterPlanNode> getFilterAttacher(ConnectionsGroup connectionsGroup) {
+		return (parent) -> new ValueInFilter(parent, in, connectionsGroup);
 	}
 
 	@Override

@@ -19,7 +19,6 @@ import java.util.stream.Collectors;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.Resource;
-import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.vocabulary.SHACL;
 import org.eclipse.rdf4j.sail.shacl.ast.ShaclAstLists;
 import org.eclipse.rdf4j.sail.shacl.ast.SparqlFragment;
@@ -81,7 +80,7 @@ public class AlternativePath extends Path {
 		return paths
 				.stream()
 				.map(p -> p.getAllAdded(connectionsGroup, dataGraph, planNodeWrapper))
-				.reduce(UnionNode::getInstance)
+				.reduce((nodes, nodes2) -> UnionNode.getInstance(connectionsGroup, nodes, nodes2))
 				.orElse(EmptyNode.getInstance());
 	}
 
@@ -128,12 +127,12 @@ public class AlternativePath extends Path {
 
 		return SparqlFragment.union(sparqlFragments,
 				(ConnectionsGroup connectionsGroup, Resource[] dataGraph, Path path,
-						StatementMatcher currentStatementMatcher, List<Statement> currentStatements) -> {
-
+						StatementMatcher currentStatementMatcher,
+						List<EffectiveTarget.SubjectObjectAndMatcher.SubjectObject> currentStatements) -> {
 					return sparqlFragments.stream()
 							.flatMap(sparqlFragment -> sparqlFragment.getRoot(connectionsGroup, dataGraph, path,
 									currentStatementMatcher, currentStatements))
-							.filter(EffectiveTarget.StatementsAndMatcher::hasStatements);
+							.filter(EffectiveTarget.SubjectObjectAndMatcher::hasStatements);
 
 				}
 		);

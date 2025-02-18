@@ -21,10 +21,10 @@ import org.apache.commons.text.StringEscapeUtils;
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
-import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.sail.SailConnection;
 import org.eclipse.rdf4j.sail.memory.MemoryStoreConnection;
+import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
 
 /**
  * @author Håvard Ottestad
@@ -35,6 +35,7 @@ public class FilterByPredicate implements PlanNode {
 	private final Set<IRI> filterOnPredicates;
 	final PlanNode parent;
 	private final On on;
+	private final ConnectionsGroup connectionsGroup;
 	private boolean printed = false;
 	private ValidationExecutionLogger validationExecutionLogger;
 	private final Resource[] dataGraph;
@@ -45,13 +46,14 @@ public class FilterByPredicate implements PlanNode {
 	}
 
 	public FilterByPredicate(SailConnection connection, Set<IRI> filterOnPredicates, PlanNode parent,
-			On on, Resource[] dataGraph) {
+			On on, Resource[] dataGraph, ConnectionsGroup connectionsGroup) {
 		this.dataGraph = dataGraph;
-		this.parent = PlanNodeHelper.handleSorting(this, parent);
+		this.parent = PlanNodeHelper.handleSorting(this, parent, connectionsGroup);
 		this.connection = connection;
 		assert this.connection != null;
 		this.filterOnPredicates = filterOnPredicates;
 		this.on = on;
+		this.connectionsGroup = connectionsGroup;
 	}
 
 	@Override
@@ -76,18 +78,11 @@ public class FilterByPredicate implements PlanNode {
 						return;
 					}
 
-					filterOnPredicates = FilterByPredicate.this.filterOnPredicates.stream()
-							.map(predicate -> {
-								try (var stream = connection
-										.getStatements(null, predicate, null, true, dataGraph)
-										.stream()) {
-									return stream.map(Statement::getPredicate)
-											.findAny()
-											.orElse(null);
-								}
-							}
-							)
-							.filter(Objects::nonNull)
+					filterOnPredicates = FilterByPredicate.this.filterOnPredicates
+							.stream()
+							.map(iri -> connectionsGroup.getSailSpecificValue(iri,
+									ConnectionsGroup.StatementPosition.predicate, connection
+							))
 							.collect(Collectors.toList());
 
 				}
@@ -174,21 +169,21 @@ public class FilterByPredicate implements PlanNode {
 
 		// added/removed connections are always newly minted per plan node, so we instead need to compare the underlying
 		// sail
-		if (connection instanceof MemoryStoreConnection) {
-			stringBuilder.append(System.identityHashCode(((MemoryStoreConnection) connection).getSail()) + " -> "
-					+ getId() + " [label=\"filter source\"]").append("\n");
-		} else {
-			stringBuilder.append(System.identityHashCode(connection) + " -> " + getId() + " [label=\"filter source\"]")
-					.append("\n");
-		}
+//		if (connection instanceof MemoryStoreConnection) {
+//			stringBuilder.append(System.identityHashCode(((MemoryStoreConnection) connection).getSail()) + " -> "
+//					+ getId() + " [label=\"filter source\"]").append("\n");
+//		} else {
+		stringBuilder.append(System.identityHashCode(connection) + " -> " + getId() + " [label=\"filter source\"]")
+				.append("\n");
+//		}
 
 		parent.getPlanAsGraphvizDot(stringBuilder);
 	}
 
 	@Override
 	public String toString() {
-		return "ExternalFilterByPredicate{" + "filterOnPredicates="
-				+ Arrays.toString(filterOnPredicates.stream().map(Formatter::prefix).toArray())
+		return "FilterByPredicate{" + "filterOnPredicates="
+				+ Formatter.prefix(filterOnPredicates)
 				+ '}';
 	}
 

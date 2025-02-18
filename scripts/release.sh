@@ -167,7 +167,6 @@ mvn versions:set -DnewVersion="${MVN_VERSION_RELEASE}"
 mvn versions:commit
 
 
-
 # delete old release branch if it exits
 if git show-ref --verify --quiet "refs/heads/${BRANCH}"; then
   git branch --delete --force "${BRANCH}" &>/dev/null
@@ -180,19 +179,10 @@ git tag "${MVN_VERSION_RELEASE}"
 
 echo "";
 echo "Pushing release branch to github"
-read -n 1 -srp "Press any key to continue (ctrl+c to cancel)"; printf "\n\n";
 
 # push release branch and tag
 git push -u origin "${BRANCH}"
 git push origin "${MVN_VERSION_RELEASE}"
-
-echo "";
-echo "You need to tell Jenkins to start the release deployment processes, for SDK and maven artifacts"
-echo "- SDK deployment: https://ci.eclipse.org/rdf4j/job/rdf4j-deploy-release-sdk/ "
-echo "- Maven deployment: https://ci.eclipse.org/rdf4j/job/rdf4j-deploy-release-ossrh/ "
-echo "(if you are on linux or windows, remember to use CTRL+SHIFT+C to copy)."
-echo "Log in, then choose 'Build with Parameters' and type in ${MVN_VERSION_RELEASE}"
-read -n 1 -srp "Press any key to continue (ctrl+c to cancel)"; printf "\n\n";
 
 # Cleanup
 mvn clean -Dmaven.clean.failOnError=false
@@ -219,15 +209,13 @@ git push
 
 echo "";
 echo "About to create PR"
-read -n 1 -srp "Press any key to continue (ctrl+c to cancel)"; printf "\n\n";
 echo "";
 
 echo "Creating pull request to merge release branch back into main"
-gh pr create --title "next development iteration: ${MVN_NEXT_SNAPSHOT_VERSION}" --body "Merge using merge commit rather than rebase"
+gh pr create -B main --title "next development iteration: ${MVN_NEXT_SNAPSHOT_VERSION}" --body "Merge using merge commit rather than rebase"
 
 echo "";
 echo "Preparing a merge-branch to merge into develop"
-read -n 1 -srp "Press any key to continue (ctrl+c to cancel)"; printf "\n\n";
 
 
 
@@ -255,7 +243,6 @@ mvn clean -Dmaven.clean.failOnError=false
 mvn clean -Dmaven.clean.failOnError=false
 
 echo "Build javadocs"
-read -n 1 -srp "Press any key to continue (ctrl+c to cancel)"; printf "\n\n";
 
 git checkout "${MVN_VERSION_RELEASE}"
 
@@ -277,7 +264,19 @@ cp -f "site/static/javadoc/${MVN_VERSION_RELEASE}.tgz" "site/static/javadoc/late
 git add --all
 git commit -s -a -m "javadocs for ${MVN_VERSION_RELEASE}"
 git push --set-upstream origin "${RELEASE_NOTES_BRANCH}"
-gh pr create -B main --title "${RELEASE_NOTES_BRANCH}" --body "Javadocs, release-notes and news item for ${MVN_VERSION_RELEASE}.\n\n - [ ] check that [Jenkins](https://ci.eclipse.org/rdf4j/) finished publishing the release\n - [ ] remember to also [add the release here on GitHub](https://github.com/eclipse-rdf4j/rdf4j/releases/new?tag=${MVN_VERSION_RELEASE}&title=RDF4JRDF4J%20${MVN_VERSION_RELEASE}) (include announcement)"
+BODY_CONTENT=$(cat <<EOF
+Javadocs, release-notes and news item for ${MVN_VERSION_RELEASE}.
+
+ - [ ] check that downloads.md is updated
+ - [ ] check that the release notes file is updated
+ - [ ] check that the news item file is updated
+ - [ ] check that [Jenkins](https://ci.eclipse.org/rdf4j/job/rdf4j-deploy-release-ossrh/) finished publishing the release
+ - [ ] check that [Jenkins](https://ci.eclipse.org/rdf4j/job/rdf4j-deploy-release-sdk/) finished publishing the sdk
+ - [ ] remember to also [add the release here on GitHub](https://github.com/eclipse-rdf4j/rdf4j/releases/new?tag=${MVN_VERSION_RELEASE}&title=RDF4J%20${MVN_VERSION_RELEASE}) (include announcement)
+EOF
+)
+
+gh pr create -B main --title "${MVN_VERSION_RELEASE} release notes" --body "$BODY_CONTENT"
 
 echo "Javadocs are in git branch ${RELEASE_NOTES_BRANCH}"
 
@@ -289,7 +288,13 @@ cd scripts
 echo ""
 echo "DONE!"
 
-
+echo "";
+echo "You need to tell Jenkins to start the release deployment processes, for SDK and maven artifacts"
+echo "- SDK deployment: https://ci.eclipse.org/rdf4j/job/rdf4j-deploy-release-sdk/ "
+echo "- Maven deployment: https://ci.eclipse.org/rdf4j/job/rdf4j-deploy-release-ossrh/ "
+echo "(if you are on linux or windows, remember to use CTRL+SHIFT+C to copy)."
+echo "Log in, then choose 'Build with Parameters' and type in ${MVN_VERSION_RELEASE}"
+read -n 1 -srp "Press any key to continue (ctrl+c to cancel)"; printf "\n\n";
 
 echo ""
 echo "You will now want to inform the community about the new release!"

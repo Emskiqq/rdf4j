@@ -11,13 +11,13 @@
 
 package org.eclipse.rdf4j.sail.shacl.ast.planNodes;
 
-import java.util.Arrays;
 import java.util.Objects;
 import java.util.Set;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
 import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
 
 public class SetFilterNode implements PlanNode {
 
@@ -28,8 +28,9 @@ public class SetFilterNode implements PlanNode {
 	private boolean printed;
 	private ValidationExecutionLogger validationExecutionLogger;
 
-	public SetFilterNode(Set<Value> targetNodeList, PlanNode parent, int index, boolean returnValid) {
-		this.parent = PlanNodeHelper.handleSorting(this, parent);
+	public SetFilterNode(Set<Value> targetNodeList, PlanNode parent, int index, boolean returnValid,
+			ConnectionsGroup connectionsGroup) {
+		this.parent = PlanNodeHelper.handleSorting(this, parent, connectionsGroup);
 		this.targetNodeList = targetNodeList;
 		this.index = index;
 		this.returnValid = returnValid;
@@ -111,7 +112,7 @@ public class SetFilterNode implements PlanNode {
 	@Override
 	public String toString() {
 		return "SetFilterNode{" + "targetNodeList="
-				+ Arrays.toString(targetNodeList.stream().map(Formatter::prefix).toArray()) + ", index=" + index
+				+ Formatter.prefix(targetNodeList) + ", index=" + index
 				+ ", returnValid=" + returnValid + '}';
 	}
 

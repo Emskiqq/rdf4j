@@ -83,7 +83,7 @@ public class ValidationQuery {
 				propertyShapeWithValue = false;
 				valueIndex = variables.size();
 				assert constraintComponent == null
-						|| !constraintComponent.getConstraintComponent().producesValidationResultValue();
+						|| !constraintComponent.getConstraintComponent().alwaysProducesValidationResultValue();
 			}
 		} else {
 			targetIndex = variables.size() - 1;
@@ -232,8 +232,9 @@ public class ValidationQuery {
 			} else {
 				extraVariablesString = "";
 			}
-		} else
+		} else {
 			extraVariablesString = "";
+		}
 
 		if (scope_validationReport == ConstraintComponent.Scope.propertyShape
 				&& propertyShapeWithValue_validationReport) {

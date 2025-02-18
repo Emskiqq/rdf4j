@@ -30,6 +30,7 @@ import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher.Variable;
 import org.eclipse.rdf4j.sail.shacl.ast.ValidationApproach;
 import org.eclipse.rdf4j.sail.shacl.ast.ValidationQuery;
 import org.eclipse.rdf4j.sail.shacl.ast.paths.Path;
+import org.eclipse.rdf4j.sail.shacl.ast.planNodes.AbstractBulkJoinPlanNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.BulkedExternalLeftOuterJoin;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.EmptyNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.GroupByFilter;
@@ -93,29 +94,32 @@ public class HasValueConstraintComponent extends AbstractConstraintComponent {
 				PlanNode addedByPath = path.getAllAdded(connectionsGroup, validationSettings.getDataGraph(), null);
 
 				addedByPath = target.getTargetFilter(connectionsGroup, validationSettings.getDataGraph(),
-						Unique.getInstance(new TrimToTarget(addedByPath), false));
+						Unique.getInstance(new TrimToTarget(addedByPath, connectionsGroup), false, connectionsGroup));
 				addedByPath = target.extend(addedByPath, connectionsGroup, validationSettings.getDataGraph(), scope,
 						EffectiveTarget.Extend.left, false, null);
 
-				addedTargets = UnionNode.getInstance(addedByPath, addedTargets);
-				addedTargets = Unique.getInstance(addedTargets, false);
+				addedTargets = UnionNode.getInstance(connectionsGroup, addedByPath, addedTargets);
 			}
+
+			addedTargets = Unique.getInstance(new TrimToTarget(addedTargets, connectionsGroup), false,
+					connectionsGroup);
 
 			PlanNode joined = new BulkedExternalLeftOuterJoin(addedTargets, connectionsGroup.getBaseConnection(),
 					validationSettings.getDataGraph(),
 					path.getTargetQueryFragment(new Variable<>("a"), new Variable<>("c"),
 							connectionsGroup.getRdfsSubClassOfReasoner(), stableRandomVariableProvider, Set.of()),
 					(b) -> new ValidationTuple(b.getValue("a"), b.getValue("c"), scope, true,
-							validationSettings.getDataGraph()));
+							validationSettings.getDataGraph()),
+					connectionsGroup, AbstractBulkJoinPlanNode.DEFAULT_VARS);
 
 			PlanNode invalidTargets = new GroupByFilter(joined, group -> {
 				return group
 						.stream()
 						.map(ValidationTuple::getValue)
 						.noneMatch(v -> hasValue.equals(v));
-			});
+			}, connectionsGroup);
 
-			return Unique.getInstance(new TrimToTarget(invalidTargets), false);
+			return Unique.getInstance(new TrimToTarget(invalidTargets, connectionsGroup), false, connectionsGroup);
 
 		} else if (scope == Scope.nodeShape) {
 
@@ -129,7 +133,8 @@ public class HasValueConstraintComponent extends AbstractConstraintComponent {
 						null);
 			}
 
-			PlanNode falseNode = new ValueInFilter(addedTargets, new HashSet<>(Collections.singletonList(hasValue)))
+			PlanNode falseNode = new ValueInFilter(addedTargets, new HashSet<>(Collections.singletonList(hasValue)),
+					connectionsGroup)
 					.getFalseNode(UnBufferedPlanNode.class);
 
 			return falseNode;
@@ -142,14 +147,16 @@ public class HasValueConstraintComponent extends AbstractConstraintComponent {
 
 	@Override
 	public PlanNode getAllTargetsPlan(ConnectionsGroup connectionsGroup, Resource[] dataGraph, Scope scope,
-			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider) {
+			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider,
+			ValidationSettings validationSettings) {
 		if (scope == Scope.propertyShape) {
 			PlanNode allTargetsPlan = getTargetChain()
 					.getEffectiveTarget(Scope.nodeShape, connectionsGroup.getRdfsSubClassOfReasoner(),
 							stableRandomVariableProvider)
 					.getPlanNode(connectionsGroup, dataGraph, Scope.nodeShape, true, null);
 
-			return Unique.getInstance(new ShiftToPropertyShape(allTargetsPlan), true);
+			return Unique.getInstance(new ShiftToPropertyShape(allTargetsPlan, connectionsGroup), true,
+					connectionsGroup);
 		}
 		return EmptyNode.getInstance();
 	}

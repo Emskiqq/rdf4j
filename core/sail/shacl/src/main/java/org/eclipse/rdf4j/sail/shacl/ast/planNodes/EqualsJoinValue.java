@@ -14,8 +14,14 @@ import java.util.Objects;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
+import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class EqualsJoinValue implements PlanNode {
+
+	static private final Logger logger = LoggerFactory.getLogger(EqualsJoinValue.class);
+
 	private final PlanNode left;
 	private final PlanNode right;
 	private final boolean useAsFilter;
@@ -23,13 +29,14 @@ public class EqualsJoinValue implements PlanNode {
 	private boolean printed = false;
 	private ValidationExecutionLogger validationExecutionLogger;
 
-	public EqualsJoinValue(PlanNode left, PlanNode right, boolean useAsFilter) {
-		this.left = PlanNodeHelper.handleSorting(this, left);
-		this.right = PlanNodeHelper.handleSorting(this, right);
+	public EqualsJoinValue(PlanNode left, PlanNode right, boolean useAsFilter, ConnectionsGroup connectionsGroup) {
+		this.left = PlanNodeHelper.handleSorting(this, left, connectionsGroup);
+		this.right = PlanNodeHelper.handleSorting(this, right, connectionsGroup);
 
 		this.useAsFilter = useAsFilter;
-//		this.stackTrace = Thread.currentThread().getStackTrace();
-
+		if (logger.isDebugEnabled()) {
+			this.stackTrace = Thread.currentThread().getStackTrace();
+		}
 	}
 
 	@Override
@@ -164,7 +171,9 @@ public class EqualsJoinValue implements PlanNode {
 
 	@Override
 	public String toString() {
-		return "EqualsJoin{" + "useAsFilter=" + useAsFilter + '}';
+		return "EqualsJoinValue{" +
+				"useAsFilter=" + useAsFilter +
+				'}';
 	}
 
 	@Override

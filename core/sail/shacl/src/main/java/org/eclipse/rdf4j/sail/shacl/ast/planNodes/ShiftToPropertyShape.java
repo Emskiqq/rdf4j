@@ -18,19 +18,23 @@ import java.util.Objects;
 
 import org.apache.commons.text.StringEscapeUtils;
 import org.eclipse.rdf4j.common.iteration.CloseableIteration;
+import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * @author Håvard Ottestad
  */
 public class ShiftToPropertyShape implements PlanNode {
+	static private final Logger logger = LoggerFactory.getLogger(ShiftToPropertyShape.class);
 
 	private StackTraceElement[] stackTrace;
 	PlanNode parent;
 	private boolean printed = false;
 	private ValidationExecutionLogger validationExecutionLogger;
 
-	public ShiftToPropertyShape(PlanNode parent) {
-		this.parent = PlanNodeHelper.handleSorting(this, parent);
+	public ShiftToPropertyShape(PlanNode parent, ConnectionsGroup connectionsGroup) {
+		this.parent = PlanNodeHelper.handleSorting(this, parent, connectionsGroup);
 		// this.stackTrace = Thread.currentThread().getStackTrace();
 	}
 

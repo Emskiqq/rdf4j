@@ -34,6 +34,7 @@ import org.eclipse.rdf4j.sail.shacl.ast.ShaclUnsupportedException;
 import org.eclipse.rdf4j.sail.shacl.ast.Shape;
 import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher;
 import org.eclipse.rdf4j.sail.shacl.ast.ValidationQuery;
+import org.eclipse.rdf4j.sail.shacl.ast.planNodes.AbstractBulkJoinPlanNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.AllTargetsPlanNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.BulkedExternalLeftOuterJoin;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.GroupByCountFilter;
@@ -138,15 +139,16 @@ public class QualifiedMinCountConstraintComponent extends AbstractConstraintComp
 							false, null);
 		} else {
 			target = getAllTargetsPlan(connectionsGroup, validationSettings.getDataGraph(), scope,
-					stableRandomVariableProvider);
+					stableRandomVariableProvider, validationSettings);
 		}
 
 		PlanNode planNode = negated(connectionsGroup, validationSettings, overrideTargetNode, scope);
 
-		planNode = new LeftOuterJoin(target, planNode);
+		planNode = new LeftOuterJoin(target, planNode, connectionsGroup);
 
-		GroupByCountFilter groupByCountFilter = new GroupByCountFilter(planNode, count -> count < qualifiedMinCount);
-		return Unique.getInstance(new TrimToTarget(groupByCountFilter), false);
+		GroupByCountFilter groupByCountFilter = new GroupByCountFilter(planNode, count -> count < qualifiedMinCount,
+				connectionsGroup);
+		return Unique.getInstance(new TrimToTarget(groupByCountFilter, connectionsGroup), false, connectionsGroup);
 
 	}
 
@@ -161,7 +163,7 @@ public class QualifiedMinCountConstraintComponent extends AbstractConstraintComp
 
 			if (overrideTargetNode == null) {
 				target = getAllTargetsPlan(connectionsGroup, validationSettings.getDataGraph(), scope,
-						stableRandomVariableProvider);
+						stableRandomVariableProvider, validationSettings);
 			} else {
 				PlanNode planNode = overrideTargetNode.getPlanNode();
 				if (planNode instanceof AllTargetsPlanNode) {
@@ -175,7 +177,7 @@ public class QualifiedMinCountConstraintComponent extends AbstractConstraintComp
 								false, null);
 			}
 
-			target = Unique.getInstance(new TrimToTarget(target), false);
+			target = Unique.getInstance(new TrimToTarget(target, connectionsGroup), false, connectionsGroup);
 
 			PlanNode relevantTargetsWithPath = new BulkedExternalLeftOuterJoin(
 					target,
@@ -187,13 +189,13 @@ public class QualifiedMinCountConstraintComponent extends AbstractConstraintComp
 									connectionsGroup.getRdfsSubClassOfReasoner(), stableRandomVariableProvider,
 									Set.of()),
 					(b) -> new ValidationTuple(b.getValue("a"), b.getValue("c"), scope, true,
-							validationSettings.getDataGraph())
-			);
+							validationSettings.getDataGraph()),
+					connectionsGroup, AbstractBulkJoinPlanNode.DEFAULT_VARS);
 
 			return new TupleMapper(relevantTargetsWithPath, t -> {
 				List<Value> targetChain = t.getTargetChain(true);
 				return new ValidationTuple(targetChain, Scope.propertyShape, false, validationSettings.getDataGraph());
-			});
+			}, connectionsGroup);
 
 		};
 
@@ -204,12 +206,12 @@ public class QualifiedMinCountConstraintComponent extends AbstractConstraintComp
 				scope
 		);
 
-		PlanNode invalid = Unique.getInstance(planNode, false);
+		PlanNode invalid = Unique.getInstance(planNode, false, connectionsGroup);
 
 		PlanNode allTargetsPlan;
 		if (overrideTargetNode == null) {
 			allTargetsPlan = getAllTargetsPlan(connectionsGroup, validationSettings.getDataGraph(), scope,
-					stableRandomVariableProvider);
+					stableRandomVariableProvider, validationSettings);
 		} else {
 			allTargetsPlan = getTargetChain()
 					.getEffectiveTarget(scope, connectionsGroup.getRdfsSubClassOfReasoner(),
@@ -223,9 +225,11 @@ public class QualifiedMinCountConstraintComponent extends AbstractConstraintComp
 			allTargetsPlan = new ShiftToPropertyShape(getTargetChain()
 					.getEffectiveTarget(Scope.nodeShape, connectionsGroup.getRdfsSubClassOfReasoner(),
 							stableRandomVariableProvider)
-					.getAllTargets(connectionsGroup, validationSettings.getDataGraph(), Scope.nodeShape));
+					.getAllTargets(connectionsGroup, validationSettings.getDataGraph(), Scope.nodeShape),
+					connectionsGroup);
 		} else {
-			allTargetsPlan = Unique.getInstance(new TrimToTarget(allTargetsPlan), false);
+			allTargetsPlan = Unique.getInstance(new TrimToTarget(allTargetsPlan, connectionsGroup), false,
+					connectionsGroup);
 			allTargetsPlan = new BulkedExternalLeftOuterJoin(
 					allTargetsPlan,
 					connectionsGroup.getBaseConnection(),
@@ -236,11 +240,11 @@ public class QualifiedMinCountConstraintComponent extends AbstractConstraintComp
 									connectionsGroup.getRdfsSubClassOfReasoner(), stableRandomVariableProvider,
 									Set.of()),
 					(b) -> new ValidationTuple(b.getValue("a"), b.getValue("c"), scope, true,
-							validationSettings.getDataGraph())
-			);
+							validationSettings.getDataGraph()),
+					connectionsGroup, AbstractBulkJoinPlanNode.DEFAULT_VARS);
 		}
 
-		invalid = new NotValuesIn(allTargetsPlan, invalid);
+		invalid = new NotValuesIn(allTargetsPlan, invalid, connectionsGroup);
 
 		return invalid;
 
@@ -248,7 +252,8 @@ public class QualifiedMinCountConstraintComponent extends AbstractConstraintComp
 
 	@Override
 	public PlanNode getAllTargetsPlan(ConnectionsGroup connectionsGroup, Resource[] dataGraph, Scope scope,
-			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider) {
+			StatementMatcher.StableRandomVariableProvider stableRandomVariableProvider,
+			ValidationSettings validationSettings) {
 		assert scope == Scope.propertyShape;
 
 		PlanNode allTargets = getTargetChain()
@@ -257,9 +262,11 @@ public class QualifiedMinCountConstraintComponent extends AbstractConstraintComp
 				.getPlanNode(connectionsGroup, dataGraph, Scope.propertyShape, true, null);
 
 		PlanNode subTargets = qualifiedValueShape.getAllTargetsPlan(connectionsGroup, dataGraph, scope,
-				new StatementMatcher.StableRandomVariableProvider());
+				new StatementMatcher.StableRandomVariableProvider(), validationSettings);
 
-		return Unique.getInstance(new TrimToTarget(UnionNode.getInstanceDedupe(allTargets, subTargets)), false);
+		return Unique
+				.getInstance(new TrimToTarget(UnionNode.getInstanceDedupe(connectionsGroup, allTargets, subTargets),
+						connectionsGroup), false, connectionsGroup);
 
 	}
 

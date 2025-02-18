@@ -29,12 +29,14 @@ import org.eclipse.rdf4j.sail.shacl.ast.StatementMatcher.Variable;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.FilterPlanNode;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.MinLengthFilter;
 import org.eclipse.rdf4j.sail.shacl.ast.planNodes.PlanNode;
+import org.eclipse.rdf4j.sail.shacl.wrapper.data.ConnectionsGroup;
 
-public class MinLengthConstraintComponent extends SimpleAbstractConstraintComponent {
+public class MinLengthConstraintComponent extends AbstractSimpleConstraintComponent {
 
 	long minLength;
 
 	public MinLengthConstraintComponent(long minLength) {
+		super();
 		this.minLength = minLength;
 	}
 
@@ -54,8 +56,8 @@ public class MinLengthConstraintComponent extends SimpleAbstractConstraintCompon
 	}
 
 	@Override
-	Function<PlanNode, FilterPlanNode> getFilterAttacher() {
-		return (parent) -> new MinLengthFilter(parent, minLength);
+	Function<PlanNode, FilterPlanNode> getFilterAttacher(ConnectionsGroup connectionsGroup) {
+		return (parent) -> new MinLengthFilter(parent, minLength, connectionsGroup);
 	}
 
 	@Override
@@ -89,6 +91,6 @@ public class MinLengthConstraintComponent extends SimpleAbstractConstraintCompon
 
 	@Override
 	public int hashCode() {
-		return (int) (minLength ^ (minLength >>> 32)) + "MinLengthConstraintComponent".hashCode();
+		return Long.hashCode(minLength) + "MinLengthConstraintComponent".hashCode();
 	}
 }
