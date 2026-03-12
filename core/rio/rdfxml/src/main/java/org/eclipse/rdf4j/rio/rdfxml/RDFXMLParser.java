@@ -89,15 +89,15 @@ import org.xml.sax.XMLReader;
  */
 public class RDFXMLParser extends XMLReaderBasedParser implements ErrorHandler {
 
-    /*-----------*
-     * Constants *
-     *-----------*/
+	/*-----------*
+	 * Constants *
+	 *-----------*/
 
 	private static final String REIFIES_NAMESPACE = "http://www.w3.org/1999/02/22-rdf-syntax-ns#reifies";
 	private static final IRI RDF_REIFIES = SimpleValueFactory.getInstance().createIRI(REIFIES_NAMESPACE);
 	protected static final String ITS_NAMESPACE = "http://www.w3.org/2005/11/its";
-    private static final String SAX_NAMESPACES = "http://xml.org/sax/features/namespaces";
-    private static final String ONE_TRIPLE_ERROR = "rdf:parseType=\"Triple\" must produce exactly one triple";
+	private static final String SAX_NAMESPACES = "http://xml.org/sax/features/namespaces";
+	private static final String ONE_TRIPLE_ERROR = "rdf:parseType=\"Triple\" must produce exactly one triple";
 
 	/*-----------*
 	 * Variables *

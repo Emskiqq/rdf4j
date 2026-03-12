@@ -101,10 +101,9 @@ public abstract class RDFXMLParserTestCase {
 			// Add all negative parser tests
 			query = ""
 					+ "PREFIX test: <http://www.w3.org/2000/10/rdf-tests/rdfcore/testSchema#>"
-					+ " SELECT ?TESTCASE ?INPUT ?OUTPUT "
+					+ " SELECT ?TESTCASE ?INPUT"
 					+ " WHERE { ?TESTCASE a test:NegativeParserTest; "
 					+ "                test:inputDocument ?INPUT; "
-					+ "                test:outputDocument ?OUTPUT; "
 					+ "                test:status \"APPROVED\" .} ";
 			try (var queryResult = con.prepareTupleQuery(query).evaluate()) {
 				while (queryResult.hasNext()) {
