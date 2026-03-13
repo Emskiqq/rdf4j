@@ -33,7 +33,7 @@ public interface TriXConstants {
 	/**
 	 * The tag that starts a new triple.
 	 */
-	String TRIPLE_TAG = "tripleTerm";
+	String TRIPLE_TAG = "triple";
 
 	/**
 	 * The tag for URI values.

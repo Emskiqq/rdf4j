@@ -25,7 +25,7 @@ import org.eclipse.rdf4j.common.annotation.Experimental;
  *           specs.
  */
 @Experimental
-public interface TripleTerm extends Resource {
+public interface TripleTerm extends Value {
 
 	@Override
 	default boolean isTripleTerm() {

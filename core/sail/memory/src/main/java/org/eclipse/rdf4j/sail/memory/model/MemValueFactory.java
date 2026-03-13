@@ -237,6 +237,8 @@ public class MemValueFactory extends AbstractValueFactory {
 			return getOrCreateMemResource((Resource) value);
 		} else if (value.isLiteral()) {
 			return getOrCreateMemLiteral((Literal) value);
+		} else if (value.isTripleTerm()) {
+			return getOrCreateMemTripleTerm((TripleTerm) value);
 		} else {
 			throw new IllegalArgumentException("value is not a Resource, Literal, or TripleTerm: " + value);
 		}
@@ -250,8 +252,6 @@ public class MemValueFactory extends AbstractValueFactory {
 			return getOrCreateMemURI((IRI) resource);
 		} else if (resource.isBNode()) {
 			return getOrCreateMemBNode((BNode) resource);
-		} else if (resource.isTripleTerm()) {
-			return getOrCreateMemTripleTerm((TripleTerm) resource);
 		} else {
 			throw new IllegalArgumentException("resource is not a URI or BNode: " + resource);
 		}

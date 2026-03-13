@@ -97,9 +97,7 @@ public class NTriplesUtil {
 	 */
 	public static Resource parseResource(String nTriplesResource, ValueFactory valueFactory)
 			throws IllegalArgumentException {
-		if (nTriplesResource.startsWith("<<")) {
-			return parseTriple(nTriplesResource, valueFactory);
-		} else if (nTriplesResource.startsWith("<")) {
+		if (nTriplesResource.startsWith("<")) {
 			return parseURI(nTriplesResource, valueFactory);
 		} else if (nTriplesResource.startsWith("_:")) {
 			return parseBNode(nTriplesResource, valueFactory);
@@ -357,6 +355,8 @@ public class NTriplesUtil {
 			return toNTriplesString((Resource) value);
 		} else if (value instanceof Literal) {
 			return toNTriplesString((Literal) value, xsdStringToPlainLiteral);
+		} else if (value instanceof TripleTerm) {
+			return toNTriplesString((TripleTerm) value);
 		} else {
 			throw new IllegalArgumentException("Unknown value type: " + value.getClass());
 		}
@@ -393,6 +393,8 @@ public class NTriplesUtil {
 			append((Resource) value, appendable);
 		} else if (value instanceof Literal) {
 			append((Literal) value, appendable, xsdStringToPlainLiteral, escapeUnicode);
+		} else if (value instanceof TripleTerm) {
+			append((TripleTerm) value, appendable);
 		} else {
 			throw new IllegalArgumentException("Unknown value type: " + value.getClass());
 		}
@@ -409,8 +411,6 @@ public class NTriplesUtil {
 			return toNTriplesString((IRI) resource);
 		} else if (resource instanceof BNode) {
 			return toNTriplesString((BNode) resource);
-		} else if (resource instanceof TripleTerm) {
-			return toNTriplesString((TripleTerm) resource);
 		} else {
 			throw new IllegalArgumentException("Unknown resource type: " + resource.getClass());
 		}
@@ -428,8 +428,6 @@ public class NTriplesUtil {
 			append((IRI) resource, appendable);
 		} else if (resource instanceof BNode) {
 			append((BNode) resource, appendable);
-		} else if (resource instanceof TripleTerm) {
-			append((TripleTerm) resource, appendable);
 		} else {
 			throw new IllegalArgumentException("Unknown resource type: " + resource.getClass());
 		}

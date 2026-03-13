@@ -23,7 +23,9 @@ import org.eclipse.rdf4j.query.parser.sparql.ast.ASTBlankNode;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTBlankNodePropertyList;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTCollection;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTOperationContainer;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTReifiedTriple;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTVar;
+import org.eclipse.rdf4j.query.parser.sparql.ast.SimpleNode;
 import org.eclipse.rdf4j.query.parser.sparql.ast.SyntaxTreeBuilderTreeConstants;
 import org.eclipse.rdf4j.query.parser.sparql.ast.VisitorException;
 
@@ -99,6 +101,34 @@ public class BlankNodeVarProcessor extends AbstractASTVisitor {
 			node.jjtReplaceWith(varNode);
 
 			return super.visit(node, data);
+		}
+
+		@Override
+		public Object visit(ASTReifiedTriple node, Object data) throws VisitorException {
+			// Visit subject, predicate, object normally
+			node.getSubj().jjtAccept(this, data);
+			node.getPred().jjtAccept(this, data);
+			node.getObj().jjtAccept(this, data);
+
+			// Handle reifier blank node specially - bypass cross-scope check
+			SimpleNode reifier = node.getReifier();
+			if (reifier instanceof ASTBlankNode) {
+				ASTBlankNode bn = (ASTBlankNode) reifier;
+				String bnodeID = bn.getID();
+				String varName = conversionMap.get(bnodeID);
+				if (varName == null) {
+					varName = createAnonVarName();
+					if (bnodeID != null) {
+						conversionMap.put(bnodeID, varName);
+					}
+				}
+				ASTVar varNode = new ASTVar(SyntaxTreeBuilderTreeConstants.JJTVAR);
+				varNode.setName(varName);
+				varNode.setAnonymous(true);
+				bn.jjtReplaceWith(varNode);
+			}
+
+			return null;
 		}
 
 		private String findVarName(String bnodeID) throws VisitorException {

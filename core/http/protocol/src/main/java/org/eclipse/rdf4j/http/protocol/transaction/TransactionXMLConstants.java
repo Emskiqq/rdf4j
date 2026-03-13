@@ -30,7 +30,7 @@ interface TransactionXMLConstants {
 
 	String NULL_TAG = "null";
 
-	String TRIPLE_TAG = "tripleTerm";
+	String TRIPLE_TAG = "triple";
 
 	String URI_TAG = "uri";
 

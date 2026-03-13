@@ -19,7 +19,7 @@ import com.google.common.base.Objects;
  *
  * @author Jeen Broekstra
  */
-public class MemTripleTerm extends MemResource implements TripleTerm {
+public class MemTripleTerm implements MemValue, TripleTerm {
 
 	private static final long serialVersionUID = -9085188980084028689L;
 

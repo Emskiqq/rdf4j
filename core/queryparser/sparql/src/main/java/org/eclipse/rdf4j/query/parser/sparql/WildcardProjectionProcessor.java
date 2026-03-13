@@ -24,7 +24,7 @@ import org.eclipse.rdf4j.query.parser.sparql.ast.ASTOperationContainer;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTProjectionElem;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTSelect;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTSelectQuery;
-import org.eclipse.rdf4j.query.parser.sparql.ast.ASTTripleRef;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTTripleTerm;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTVar;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTWhereClause;
 import org.eclipse.rdf4j.query.parser.sparql.ast.Node;
@@ -174,8 +174,8 @@ public class WildcardProjectionProcessor extends AbstractASTVisitor {
 			// only include the actual alias from a BIND
 			// exception: in case of ASTTRipleRef include its vars
 			Node first = node.jjtGetChild(0);
-			if (first instanceof ASTTripleRef) {
-				ASTTripleRef triple = (ASTTripleRef) first;
+			if (first instanceof ASTTripleTerm) {
+				ASTTripleTerm triple = (ASTTripleTerm) first;
 				super.visit(triple, data);
 			}
 			Node aliasNode = node.jjtGetChild(1);
