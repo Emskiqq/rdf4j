@@ -88,35 +88,17 @@ public class SyntaxTreeBuilder {
 		return s;
 	}
 
-	private String readToMatchingBrace(boolean isDeleteData) throws ParseException {
+	private String readToMatchingBrace() throws ParseException {
 	    StringBuilder sb = new StringBuilder();
 	    Token tok;
-        Token prevTok = null;
 	    int nesting = 1;
 	    boolean previousTokenDtSep = false;
-        boolean lastTildeHasNamedReifier = false;
 	    while (true) {
 			tok = getToken(1);
 			if ("".equals(tok.image)) {
 				throw new ParseException("closing brace missing");
 			}
-            // Track if ~ was followed by a named IRI (not a blank node)
-            if (prevTok != null && prevTok.kind == TILDE) {
-                // named reifier if current token is IRI, prefixed name - not blank node
-                lastTildeHasNamedReifier = (tok.kind == Q_IRI_REF
-                    || tok.kind == PNAME_NS
-                    || tok.kind == PNAME_LN);
-            }
-            if (tok.kind == TILDE) {
-                lastTildeHasNamedReifier = false; // reset until we see what follows
-            }
-            // Only throw for DELETE DATA, not INSERT DATA
-            if (tok.kind == ANNOTATION_OPEN && isDeleteData && !lastTildeHasNamedReifier) {
-                throw new ParseException(
-                    "Annotations not allowed in DELETE DATA — blank nodes are forbidden");
-            }
-			if (!previousTokenDtSep && !tok.image.equals("^^") && !tok.image.startsWith("@") &&
-			    !tok.image.equals("(") && !tok.image.equals(">>") && !tok.image.equals("|") && !tok.image.equals("}")) {
+			if (!previousTokenDtSep && !tok.image.equals("^^")&& !tok.image.startsWith("@")) {
 				sb.append(" ");
 			}
 			if (tok.kind == LBRACE) nesting++;
@@ -127,60 +109,10 @@ public class SyntaxTreeBuilder {
 			sb.append(tok.image);
 			previousTokenDtSep = tok.image.equals("^^");
 
-            prevTok = tok;
 			tok = getNextToken();
 	    }
 	    return sb.toString();
 	}
-
-	private static void validateStringLiteral(String raw, int line, int col) throws ParseException {
-        StringBuilder resolved = new StringBuilder();
-        int i = 0;
-        while (i < raw.length()) {
-            char c = raw.charAt(i);
-            if (c == '\\' && i + 1 < raw.length()) {
-                char next = raw.charAt(i + 1);
-                if (next == 'u' && i + 5 <= raw.length()) {
-                    try {
-                        char r = (char) Integer.parseInt(raw.substring(i + 2, i + 6), 16);
-                        resolved.append(r);
-                        i += 6;
-                        continue;
-                    } catch (NumberFormatException e) {
-                        // not a valid Unicode escape, treat \ as literal character
-                    }
-                } else if (next == 'U' && i + 9 <= raw.length()) {
-                    try {
-                        int cp = Integer.parseInt(raw.substring(i + 2, i + 10), 16);
-                        resolved.appendCodePoint(cp);
-                        i += 10;
-                        continue;
-                    } catch (NumberFormatException e) {
-                        // not a valid Unicode escape, treat \ as literal character
-                    }
-                }
-            }
-            resolved.append(c);
-            i++;
-        }
-
-        // Then validate all backslash sequences are valid ECHARs
-        String s = resolved.toString();
-        for (int j = 0; j < s.length(); j++) {
-            if (s.charAt(j) == '\\') {
-                if (j + 1 >= s.length() || !isValidEscapeChar(s.charAt(j + 1))) {
-                    throw new ParseException(
-                        "Invalid escape sequence at line " + line + ", column " + col);
-                }
-                j++;
-            }
-        }
-    }
-
-    private static boolean isValidEscapeChar(char c) {
-        return c == 't' || c == 'b' || c == 'n' || c == 'r' || c == 'f'
-            || c == '\\' || c == '"' || c == '\'';
-    }
 }
 PARSER_END(SyntaxTreeBuilder)
 
@@ -285,7 +217,6 @@ TOKEN [IGNORE_CASE] :
 |	<BNODE: "bnode">
 |	<STRDT: "strdt">
 |	<STRLANG: "strlang">
-|	<STRLANGDIR: "strlangdir">
 |	<UUID: "uuid">
 |	<STRUUID: "struuid">
 |	<IRI: "IRI"|"URI">
@@ -339,15 +270,6 @@ TOKEN [IGNORE_CASE] :
 |	<SHA256: "sha256">
 |	<SHA384: "sha384">
 |	<SHA512: "sha512">
-|   <IS_TRIPLE: "isTriple">
-|   <TRIPLE_FUNC: "triple">
-|   <SUBJECT_FUNC: "subject">
-|   <PREDICATE_FUNC: "predicate">
-|   <OBJECT_FUNC: "object">
-|   <VERSION: "version">
-|   <LANGDIR: "langdir">
-|   <HAS_LANG: "hasLang">
-|   <HAS_LANGDIR: "hasLangDir">
 }
 
 TOKEN [IGNORE_CASE] :	// SPARQL 1.1 Update-specific tokens
@@ -380,7 +302,7 @@ TOKEN:
 |	<BLANK_NODE_LABEL: "_:" (<PN_CHARS_U> | <NUM>) ((<PN_CHARS>|".")* <PN_CHARS>)? >
 |	<VAR1: "?" <VARNAME>>
 |	<VAR2: "$" <VARNAME>>
-|	<LANGTAG: "@" (<ALPHA>)+ ("-" (<ALPHA>|<NUM>)+)* ("--" ("ltr"|"rtl"))?>
+|	<LANGTAG: "@" (<ALPHA>)+ ("-" (<ALPHA>|<NUM>)+)*>
 |	<INTEGER: (<NUM>)+>
 |	<INTEGER_POSITIVE: "+" <INTEGER>>
 |	<INTEGER_NEGATIVE: "-" <INTEGER>>
@@ -427,9 +349,6 @@ TOKEN:
 |	<#VARNAME: (<PN_CHARS_U> | <NUM> ) (<VAR_CHAR>)*>
 |	<TRIPLE_OPEN: "<<">
 |	<TRIPLE_CLOSE: ">>">
-|   <TILDE: "~">
-|   <ANNOTATION_OPEN: "{|">
-|   <ANNOTATION_CLOSE: "|}">
 }
 
 //
@@ -460,7 +379,7 @@ ASTQueryContainer QueryContainer():
 void Prolog() #void :
 {}
 {
-	( PrefixDecl() | BaseDecl() | VersionDecl() )*
+	( PrefixDecl() | BaseDecl() )*
 }
 
 void BaseDecl() :
@@ -482,11 +401,6 @@ void PrefixDecl() :
 	}
 }
 
-void VersionDecl() :
-{ Token t; }
-{
-    <VERSION> ( t = <STRING_LITERAL1> | t = <STRING_LITERAL2> ) { jjtThis.setVersion(t.image); }
-}
 
 void Query() #void :
 {}
@@ -551,7 +465,7 @@ void ConstructQuery() :
 void Construct() :
 {}
 {
-	<CONSTRUCT> [ LOOKAHEAD(3) ConstructClause() ]
+	<CONSTRUCT> [ LOOKAHEAD(2) ConstructClause() ]
 
 }
 
@@ -579,7 +493,7 @@ void Describe() :
 	(
 		<STAR> { jjtThis.setWildcard(true); }
 	|
-		( VarOrIRIref() ) +
+		( VarOrIRIref() | ConstTripleRef())+
 	)
 }
 
@@ -662,8 +576,8 @@ void BindingValue() :
 |	RDFLiteral()
 |	NumericLiteral()
 |	BooleanLiteral()
-|   ConstTripleTerm()
 |	<UNDEF>
+|	ConstTripleRef()
 }
 
 void SolutionModifier() #void :
@@ -862,13 +776,7 @@ void ArgList() #void :
 {
 	<NIL>
 |
-	<LPAREN> ValueExpression() ( <COMMA> ValueExpression() )* <RPAREN>
-}
-
-void ValueExpression() #void :
-{}
-{
-    LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) ConstTripleTerm() | ConditionalOrExpression()
+	<LPAREN> Expression() ( <COMMA> Expression() )* <RPAREN>
 }
 
 void TriplesSameSubject() :
@@ -882,17 +790,7 @@ void TriplesSameSubject() :
 void PropertyList() :
 {}
 {
-	Verb() ObjectList()
-    ( LOOKAHEAD(<TILDE> | <ANNOTATION_OPEN>)
-        (
-            <TILDE> ( IRIref() | BlankNode() | Var() )
-            |
-            <ANNOTATION_OPEN>
-                PropertyList() { ((ASTPropertyList)jjtree.peekNode()).setAnnotation(true); }
-            <ANNOTATION_CLOSE>
-        )
-    )*
-	[ <SEMICOLON> [PropertyList()] ]
+	Verb() ObjectList() [ <SEMICOLON> [PropertyList()] ]
 }
 
 void ObjectList():
@@ -904,10 +802,6 @@ void ObjectList():
 void TriplesSameSubjectPath() :
 {}
 {
-    LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) VarOrTerm() PropertyListPath()
-    |
-    LOOKAHEAD(<TRIPLE_OPEN>) ReifiedTripleSubject() [PropertyListPath()]
-    |
     VarOrTerm() PropertyListPath()
     |
     TriplesNodePath() [PropertyListPath()]
@@ -916,17 +810,7 @@ void TriplesSameSubjectPath() :
 void PropertyListPath() :
 {}
 {
-    (VerbPath() | VerbSimple()) ObjectListPath()
-    ( LOOKAHEAD(<TILDE> | <ANNOTATION_OPEN>)
-        (
-            <TILDE> ( IRIref() | BlankNode() )
-            |
-            <ANNOTATION_OPEN>
-                PropertyListPath() { ((ASTPropertyListPath)jjtree.peekNode()).setAnnotation(true); }
-            <ANNOTATION_CLOSE>
-        )
-    )*
-    [<SEMICOLON> [PropertyListPath()] ]
+    (VerbPath() | VerbSimple()) ObjectListPath() [<SEMICOLON> [PropertyListPath()] ]
 }
 
 void ObjectListPath() #ObjectList:
@@ -1100,8 +984,6 @@ void GraphNodePath() #void :
 void VarOrTerm() #void :
 {}
 {
-    LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) TripleTerm()
-|
 	Var()
 |
 	GraphTerm()
@@ -1139,69 +1021,33 @@ void GraphTerm() #void :
 |
 	<NIL> {jjtThis.setValue(RDF.NIL.toString());} #IRI
 |
-	ReifiedTriple()
+	TripleRef()
 }
 
-void ReifiedTriple() :
+void TripleRef() :
 {}
 {
-    <TRIPLE_OPEN>
-        ( LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) TripleTerm() | GraphTerm() | Var() )
-        (IRIref() | Var())
-        ( LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) TripleTerm() | GraphTerm() | Var() )
-        [
-            <TILDE>
-            ( IRIref() | BlankNode() | Var() )
-        ]
-    <TRIPLE_CLOSE>
+	<TRIPLE_OPEN>
+		(GraphTerm() | Var())
+		(IRIref() | Var())
+		(GraphTerm() | Var())
+	<TRIPLE_CLOSE>
 }
 
-void TripleTerm() :
+void ConstTripleRef() :
 {}
 {
-    <TRIPLE_OPEN>
-        <LPAREN>
-            (IRIref() | BlankNode() | TripleTerm() | Var())
-            (IRIref() | Var())
-            (IRIref() | BlankNode() | TripleTerm() | NumericLiteral() | RDFLiteral() |BooleanLiteral() | Var())
-        <RPAREN>
-    <TRIPLE_CLOSE>
-}
-
-void LabeledTripleTerm() #TripleTerm :
-{}
-{
-    <TRIPLE_OPEN>
-        <LPAREN>
-            (IRIref() | LabeledBlankNode() | Var())
-            (IRIref() | Var())
-            (IRIref() | LabeledBlankNode() | TripleTerm() | NumericLiteral() | RDFLiteral() |BooleanLiteral() | Var())
-        <RPAREN>
-    <TRIPLE_CLOSE>
-}
-
-void ConstTripleTerm() :
-{}
-{
-    <TRIPLE_OPEN>
-        <LPAREN>
-            ( IRIref() | LabeledBlankNode() )
-            IRIref()
-            ( ConstTripleTerm() | IRIref() | LabeledBlankNode() | NumericLiteral() | RDFLiteral() |BooleanLiteral() )
-        <RPAREN>
-    <TRIPLE_CLOSE>
-}
-
-void ReifiedTripleSubject() #void :
-{}
-{
-    ReifiedTriple()
+	<TRIPLE_OPEN>
+		(ConstTripleRef() | IRIref())
+		IRIref()
+		(ConstTripleRef() | IRIref() | NumericLiteral() | RDFLiteral() |BooleanLiteral() )
+	<TRIPLE_CLOSE>
 }
 
 void Expression() #void :
 {}
 {
-	LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) LabeledTripleTerm() | ConditionalOrExpression()
+	TripleRef() | ConditionalOrExpression()
 }
 
 void ConditionalOrExpression() #void :
@@ -1269,7 +1115,7 @@ void MultiplicativeExpression() #void :
 void UnaryExpression() #void :
 {}
 {
-	<NOT> UnaryExpression() #Not
+	<NOT> PrimaryExpression() #Not
 |
 	[<PLUS>] PrimaryExpression()
 |
@@ -1378,14 +1224,6 @@ void BuiltInCall() #void :
 |	RDFTermFunction()
 |	DateTimeFunction()
 |	HashFunction()
-|   TripleFunc()
-|   SubjectFunc()
-|   PredicateFunc()
-|   ObjectFunc()
-|   LangDirFunc()
-|   StrLangDirFunc()
-|   HasLangFunc()
-|   HasLangDirFunc()
 }
 
 void StringFunction() #void :
@@ -1432,7 +1270,6 @@ void RDFTermFunction() #void :
 |	StrLang()
 |	UUID()
 |	STRUUID()
-|   IsTriple()
 }
 
 void DateTimeFunction() #void :
@@ -1797,55 +1634,6 @@ void NotExistsFunc() :
     <NOT_FUNC> <EXISTS> GroupGraphPattern()
 }
 
-void IsTriple() :
-{}
-{
-    <IS_TRIPLE> <LPAREN> Expression() <RPAREN>
-}
-void TripleFunc() :
-{}
-{
-    <TRIPLE_FUNC> <LPAREN> Expression() <COMMA> Expression() <COMMA> Expression() <RPAREN>
-}
-void SubjectFunc() :
-{}
-{
-    <SUBJECT_FUNC> <LPAREN> Expression() <RPAREN>
-}
-void PredicateFunc() :
-{}
-{
-    <PREDICATE_FUNC> <LPAREN> Expression() <RPAREN>
-}
-void ObjectFunc() :
-{}
-{
-    <OBJECT_FUNC> <LPAREN> Expression() <RPAREN>
-}
-
-void LangDirFunc() :
-{}
-{
-    <LANGDIR> <LPAREN> Expression() <RPAREN>
-}
-
-void HasLangFunc() :
-{}
-{
-    <HAS_LANG> <LPAREN> Expression() <RPAREN>
-}
-
-void HasLangDirFunc() :
-{}
-{
-    <HAS_LANGDIR> <LPAREN> Expression() <RPAREN>
-}
-
-void StrLangDirFunc() :
-{}
-{
-    <STRLANGDIR> <LPAREN> Expression() <COMMA> Expression() <COMMA> Expression() <RPAREN>
-}
 
 void RDFLiteral() :
 { Token t; }
@@ -1861,9 +1649,11 @@ void RDFLiteral() :
 void NumericLiteral() #void :
 {}
 {
-	NumericLiteralUnsigned()
-|	NumericLiteralPositive()
-|	NumericLiteralNegative()
+	(
+		NumericLiteralUnsigned()
+	|	NumericLiteralPositive()
+	|	NumericLiteralNegative()
+	)
 }
 
 void NumericLiteralUnsigned() #NumericLiteral :
@@ -1922,18 +1712,10 @@ void String() :
 { Token t; }
 {
 	( t = <STRING_LITERAL1> | t= <STRING_LITERAL2> )
-	{
-        String raw = _trimString(t.image, 1);
-        validateStringLiteral(raw, t.beginLine, t.beginColumn);
-        jjtThis.setValue(raw);
-    }
+	{jjtThis.setValue(_trimString(t.image, 1));}
 |
 	( t = <STRING_LITERAL_LONG1> | t = <STRING_LITERAL_LONG2>)
-	{
-        String raw = _trimString(t.image, 3);
-        validateStringLiteral(raw, t.beginLine, t.beginColumn);
-        jjtThis.setValue(raw);
-    }
+	{jjtThis.setValue(_trimString(t.image, 3));}
 }
 
 void IRIref() #void :
@@ -1957,12 +1739,6 @@ void BlankNode() :
 	t = <BLANK_NODE_LABEL> {jjtThis.setID(t.image.substring(2));}
 |
 	<ANON>
-}
-
-void LabeledBlankNode() #BlankNode :
-{ Token t; }
-{
-    t = <BLANK_NODE_LABEL> {jjtThis.setID(t.image.substring(2));}
 }
 
 void IRI() :
@@ -1995,10 +1771,10 @@ void GraphRef() #void :
 	<GRAPH> IRIref()
 }
 
-void UnparsedQuadDataBlock(boolean isDelete) :
+void UnparsedQuadDataBlock() :
 {}
 {
-    <LBRACE> {jjtThis.setDataBlock(readToMatchingBrace(isDelete)); } <RBRACE>
+    <LBRACE> {jjtThis.setDataBlock(readToMatchingBrace()); } <RBRACE>
 }
 
 void QuadData() #void :
@@ -2081,13 +1857,13 @@ void Create() :
 void InsertData() :
 {}
 {
-    <INSERT> <DATA> UnparsedQuadDataBlock(false)
+    <INSERT> <DATA> UnparsedQuadDataBlock()
 }
 
 void DeleteData() :
 {}
 {
-    <DELETE> <DATA> UnparsedQuadDataBlock(true)
+    <DELETE> <DATA> UnparsedQuadDataBlock()
 }
 
 void DeleteWhere() :

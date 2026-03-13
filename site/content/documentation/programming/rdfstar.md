@@ -129,7 +129,7 @@ The default [SPARQL 1.1 Query Results JSON format](https://www.w3.org/TR/sparql1
   "results" : {
     "bindings": [
       { "a" : {
-          "type" : "triple",
+          "type" : "tripleTerm",
           "value" : {
             "subject" : {
               "type" : "uri",

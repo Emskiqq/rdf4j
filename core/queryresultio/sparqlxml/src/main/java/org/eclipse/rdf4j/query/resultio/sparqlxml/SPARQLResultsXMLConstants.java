@@ -63,7 +63,7 @@ interface SPARQLResultsXMLConstants {
 
 	/* tag constants for serialization of RDF-star values in results */
 
-	String TRIPLE_TAG = "triple";
+	String TRIPLE_TAG = "tripleTerm";
 
 	/* Stardog variant */
 	String STATEMENT_TAG = "statement";

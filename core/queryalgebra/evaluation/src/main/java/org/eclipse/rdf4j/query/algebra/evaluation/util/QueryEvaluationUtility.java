@@ -61,14 +61,8 @@ public class QueryEvaluationUtility {
 			if (datatype == CoreDatatype.XSD.STRING) {
 				return Result.fromBoolean(!label.isEmpty());
 			} else if (datatype == CoreDatatype.XSD.BOOLEAN) {
-				if ("true".equals(label) || "1".equals(label)) {
-					return Result._true;
-				} else if ("false".equals(label) || "0".equals(label)) {
-					return Result._false;
-				} else {
-					// ill-typed literal — "z"^^xsd:boolean etc. must be a type error
-					return Result.incompatibleValueExpression;
-				}
+				// also false for illegal values
+				return Result.fromBoolean("true".equals(label) || "1".equals(label));
 			} else if (datatype == CoreDatatype.XSD.DECIMAL) {
 				try {
 					String normDec = XMLDatatypeUtil.normalizeDecimal(label);

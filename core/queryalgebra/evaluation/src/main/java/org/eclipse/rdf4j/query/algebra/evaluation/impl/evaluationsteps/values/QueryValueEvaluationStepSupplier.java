@@ -182,27 +182,6 @@ public class QueryValueEvaluationStepSupplier {
 		return make(arg, "lang called on constant that throws", bs -> lang(arg, bs, vf));
 	}
 
-	public static QueryValueEvaluationStep prepareLangDir(QueryValueEvaluationStep arg, ValueFactory vf) {
-		return make(arg, "langDir called on constant that throws", bs -> langDir(arg, bs, vf));
-	}
-
-	public static QueryValueEvaluationStep prepareStrLangDir(
-			QueryValueEvaluationStep lexArg,
-			QueryValueEvaluationStep langArg,
-			QueryValueEvaluationStep dirArg,
-			ValueFactory vf) {
-		return make(lexArg, "strLangDir called on constant that throws",
-				bs -> strLangDir(lexArg, langArg, dirArg, bs, vf));
-	}
-
-	public static QueryValueEvaluationStep prepareHasLangDir(QueryValueEvaluationStep arg) {
-		return make(arg, "hasLangDir called on constant that throws", bs -> hasLangDir(arg, bs));
-	}
-
-	public static QueryValueEvaluationStep prepareHasLang(QueryValueEvaluationStep arg) {
-		return make(arg, "hasLangDir called on constant that throws", bs -> hasLang(arg, bs));
-	}
-
 	private static Value lang(QueryValueEvaluationStep arg, BindingSet bindings, ValueFactory valueFactory) {
 		Value argValue = arg.evaluate(bindings);
 
@@ -212,81 +191,6 @@ public class QueryValueEvaluationStepSupplier {
 		}
 
 		throw new ValueExprEvaluationException();
-	}
-
-	private static Value langDir(QueryValueEvaluationStep arg, BindingSet bindings, ValueFactory vf) {
-		Value argValue = arg.evaluate(bindings);
-
-		if (argValue instanceof Literal) {
-			Literal lit = (Literal) argValue;
-			var baseDir = lit.getBaseDirection();
-			if (baseDir != null && baseDir != Literal.BaseDirection.NONE) {
-				String suffix = baseDir.toString();
-				return vf.createLiteral(suffix.substring(2));
-			}
-			String lang = lit.getLanguage().orElse("");
-			int sep = lang.indexOf(Literal.BASE_DIR_SEPARATOR);
-			return vf.createLiteral(sep >= 0 ? lang.substring(sep + 2) : "");
-		}
-
-		throw new ValueExprEvaluationException();
-	}
-
-	private static Value strLangDir(
-			QueryValueEvaluationStep lexArg,
-			QueryValueEvaluationStep langArg,
-			QueryValueEvaluationStep dirArg,
-			BindingSet bindings,
-			ValueFactory vf) {
-
-		Value lexValue = lexArg.evaluate(bindings);
-		Value langValue = langArg.evaluate(bindings);
-		Value dirValue = dirArg.evaluate(bindings);
-
-		if (!(lexValue instanceof Literal) || !(langValue instanceof Literal)
-				|| !(dirValue instanceof Literal)) {
-			throw new ValueExprEvaluationException(
-					"strLangDir() requires three plain literal arguments");
-		}
-
-		String lex = ((Literal) lexValue).getLabel();
-		String lang = ((Literal) langValue).getLabel();
-		String dir = ((Literal) dirValue).getLabel().toLowerCase();
-
-		if (!dir.equals("ltr") && !dir.equals("rtl")) {
-			throw new ValueExprEvaluationException(
-					"strLangDir() direction must be \"ltr\" or \"rtl\", got: " + dir);
-		}
-
-		if (lang.isEmpty()) {
-			throw new ValueExprEvaluationException(
-					"strLangDir() language tag must not be empty");
-		}
-
-		Literal.BaseDirection baseDir = Literal.BaseDirection.fromString(Literal.BASE_DIR_SEPARATOR + dir);
-		return vf.createLiteral(lex, lang, baseDir);
-	}
-
-	private static Value hasLang(QueryValueEvaluationStep arg, BindingSet bindings) {
-		Value argValue = arg.evaluate(bindings);
-		if (argValue instanceof Literal) {
-			Literal lit = (Literal) argValue;
-			return BooleanLiteral.valueOf(lit.getLanguage().isPresent());
-		}
-		return BooleanLiteral.FALSE;
-	}
-
-	private static Value hasLangDir(QueryValueEvaluationStep arg, BindingSet bindings) {
-		Value argValue = arg.evaluate(bindings);
-		if (argValue instanceof Literal) {
-			Literal lit = (Literal) argValue;
-			Literal.BaseDirection dir = lit.getBaseDirection();
-			boolean hasDir = lit.getLanguage().isPresent()
-					&& dir != null
-					&& dir != Literal.BaseDirection.NONE;
-			return BooleanLiteral.valueOf(hasDir);
-		}
-		return BooleanLiteral.FALSE;
 	}
 
 	public static QueryValueEvaluationStep bnode(QueryValueEvaluationStep nodeVes, ValueFactory vf) {

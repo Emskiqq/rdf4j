@@ -414,6 +414,9 @@ public class SailRepositoryConnection extends AbstractRepositoryConnection imple
 	@Override
 	protected void addWithoutCommit(Resource subject, IRI predicate, Value object, Resource... contexts)
 			throws RepositoryException {
+		if (subject instanceof TripleTerm) {
+			throw new RepositoryException("Triple terms are not allowed in subject position.");
+		}
 		try {
 			sailConnection.addStatement(subject, predicate, object, contexts);
 		} catch (SailReadOnlyException e) {

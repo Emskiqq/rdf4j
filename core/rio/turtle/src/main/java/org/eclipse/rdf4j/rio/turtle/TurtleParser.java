@@ -446,7 +446,7 @@ public class TurtleParser extends AbstractRDFParser {
 		} else {
 			Value value = parseValue();
 
-			if (value instanceof Resource) {
+			if (value instanceof Resource && !(value instanceof TripleTerm)) {
 				subject = (Resource) value;
 			} else if (value != null) {
 				reportFatalError("Illegal subject value: " + value);

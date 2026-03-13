@@ -25,7 +25,6 @@ import org.eclipse.rdf4j.query.algebra.InsertData;
 import org.eclipse.rdf4j.query.algebra.Load;
 import org.eclipse.rdf4j.query.algebra.Modify;
 import org.eclipse.rdf4j.query.algebra.Move;
-import org.eclipse.rdf4j.query.algebra.ReifiedTripleRef;
 import org.eclipse.rdf4j.query.algebra.StatementPattern.Scope;
 import org.eclipse.rdf4j.query.algebra.TripleRef;
 import org.eclipse.rdf4j.query.algebra.TupleExpr;
@@ -49,8 +48,7 @@ import org.eclipse.rdf4j.query.parser.sparql.ast.ASTLoad;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTModify;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTMove;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTQuadsNotTriples;
-import org.eclipse.rdf4j.query.parser.sparql.ast.ASTReifiedTriple;
-import org.eclipse.rdf4j.query.parser.sparql.ast.ASTTripleTerm;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTTripleRef;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTUnparsedQuadDataBlock;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTUpdate;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTWhereClause;
@@ -380,47 +378,17 @@ public class UpdateExprBuilder extends TupleExprBuilder {
 	}
 
 	@Override
-	protected Var buildReifiedTripleVar(Object reifier, Var subjVar, Var predVar, Var objVar) throws VisitorException {
-		if (where == null) {
-			return super.buildReifiedTripleVar(reifier, subjVar, predVar, objVar);
-		}
-		ReifiedTripleRef rtr = buildReifiedTripleRef(subjVar, predVar, objVar, reifier);
-		Extension ext = new Extension(where);
-		ext.addElement(new ExtensionElem(castToValueExpr(rtr), rtr.getExprVar().getName()));
-		graphPattern.addRequiredSP(rtr.getReifVar().clone(), REIFIES_VAR.clone(), rtr.getExprVar().clone());
-		where = ext;
-		return rtr.getReifVar();
-	}
-
-	@Override
-	public TupleExpr visit(ASTTripleTerm node, Object data) throws VisitorException {
+	public TupleExpr visit(ASTTripleRef node, Object data) throws VisitorException {
 		if (where == null) {
 			return super.visit(node, data);
 		}
-		TripleRef ret = constructTripleRefFromAST(node);
-		Extension ext = new Extension(where);
-		ext.addElement(new ExtensionElem(castToValueExpr(ret), ret.getExprVar().getName()));
-		where = ext;
-
-		return ret;
-	}
-
-	@Override
-	public TupleExpr visit(ASTReifiedTriple node, Object data) throws VisitorException {
-		if (where == null) {
-			return super.visit(node, data);
-		}
-		ReifiedTripleRef ret = new ReifiedTripleRef();
+		TripleRef ret = new TripleRef();
 		ret.setSubjectVar(mapValueExprToVar(node.getSubj().jjtAccept(this, ret)));
 		ret.setPredicateVar(mapValueExprToVar(node.getPred().jjtAccept(this, ret)));
 		ret.setObjectVar(mapValueExprToVar(node.getObj().jjtAccept(this, ret)));
 		ret.setExprVar(createAnonVar());
-		ret.setReifVar(node.getReifier() != null ? mapValueExprToVar(node.getReifier().jjtAccept(this, ret))
-				: createAnonVar());
 		Extension ext = new Extension(where);
 		ext.addElement(new ExtensionElem(castToValueExpr(ret), ret.getExprVar().getName()));
-
-		graphPattern.addRequiredSP(ret.getReifVar().clone(), REIFIES_VAR.clone(), ret.getExprVar().clone());
 		where = ext;
 
 		return ret;

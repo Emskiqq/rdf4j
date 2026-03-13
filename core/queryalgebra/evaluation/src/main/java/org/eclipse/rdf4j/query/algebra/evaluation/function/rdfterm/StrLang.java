@@ -43,11 +43,7 @@ public class StrLang implements Function {
 			Literal lit = (Literal) lexicalValue;
 
 			if (languageValue instanceof Literal) {
-				var language = ((Literal) languageValue).getLanguage();
-				if (language.isPresent()) {
-					return valueFactory.createLiteral(lit.getLabel(), language.get());
-				}
-				return valueFactory.createLiteral(lit.getLabel());
+				return valueFactory.createLiteral(lit.getLabel(), ((Literal) languageValue).getLabel());
 			} else {
 				throw new ValueExprEvaluationException("illegal value for operand: " + languageValue);
 			}

@@ -9,7 +9,7 @@
   "results" : {
     "bindings": [
       { "a" : {
-          "type" : "triple",
+          "type" : "tripleTerm",
           "value" : {
             "subject" : {
               "type" : "uri",

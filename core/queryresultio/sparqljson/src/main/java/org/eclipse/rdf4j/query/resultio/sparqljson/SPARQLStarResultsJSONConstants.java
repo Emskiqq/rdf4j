@@ -32,7 +32,7 @@ import org.eclipse.rdf4j.query.resultio.TupleQueryResultFormat;
  *
  * <pre>
  * 	"b" : {
- * 		"type" : "triple",
+ * 		"type" : "tripleTerm",
  * 		"value" : {
  * 			"s" : {
  * 				"type" : "uri",
@@ -59,7 +59,7 @@ final class SPARQLStarResultsJSONConstants {
 	/**
 	 * Type string for serialized {@link TripleTerm} value.
 	 */
-	static final String TRIPLE = "triple";
+	static final String TRIPLE = "tripleTerm";
 
 	/**
 	 * Key name of the JSON object for the triple's subject.

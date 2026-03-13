@@ -12,7 +12,6 @@ package org.eclipse.rdf4j.query.parser.sparql;
 
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
@@ -59,18 +58,14 @@ import org.eclipse.rdf4j.query.algebra.FunctionCall;
 import org.eclipse.rdf4j.query.algebra.Group;
 import org.eclipse.rdf4j.query.algebra.GroupConcat;
 import org.eclipse.rdf4j.query.algebra.GroupElem;
-import org.eclipse.rdf4j.query.algebra.HasLang;
-import org.eclipse.rdf4j.query.algebra.HasLangDir;
 import org.eclipse.rdf4j.query.algebra.IRIFunction;
 import org.eclipse.rdf4j.query.algebra.If;
 import org.eclipse.rdf4j.query.algebra.IsBNode;
 import org.eclipse.rdf4j.query.algebra.IsLiteral;
 import org.eclipse.rdf4j.query.algebra.IsNumeric;
-import org.eclipse.rdf4j.query.algebra.IsTriple;
 import org.eclipse.rdf4j.query.algebra.IsURI;
 import org.eclipse.rdf4j.query.algebra.Join;
 import org.eclipse.rdf4j.query.algebra.Lang;
-import org.eclipse.rdf4j.query.algebra.LangDir;
 import org.eclipse.rdf4j.query.algebra.LangMatches;
 import org.eclipse.rdf4j.query.algebra.ListMemberOperator;
 import org.eclipse.rdf4j.query.algebra.MathExpr;
@@ -87,7 +82,6 @@ import org.eclipse.rdf4j.query.algebra.ProjectionElemList;
 import org.eclipse.rdf4j.query.algebra.QueryModelNode;
 import org.eclipse.rdf4j.query.algebra.Reduced;
 import org.eclipse.rdf4j.query.algebra.Regex;
-import org.eclipse.rdf4j.query.algebra.ReifiedTripleRef;
 import org.eclipse.rdf4j.query.algebra.SameTerm;
 import org.eclipse.rdf4j.query.algebra.Sample;
 import org.eclipse.rdf4j.query.algebra.Service;
@@ -96,12 +90,9 @@ import org.eclipse.rdf4j.query.algebra.Slice;
 import org.eclipse.rdf4j.query.algebra.StatementPattern;
 import org.eclipse.rdf4j.query.algebra.StatementPattern.Scope;
 import org.eclipse.rdf4j.query.algebra.Str;
-import org.eclipse.rdf4j.query.algebra.StrLangDir;
 import org.eclipse.rdf4j.query.algebra.Sum;
-import org.eclipse.rdf4j.query.algebra.TripleComponent;
 import org.eclipse.rdf4j.query.algebra.TripleRef;
 import org.eclipse.rdf4j.query.algebra.TupleExpr;
-import org.eclipse.rdf4j.query.algebra.UnaryValueOperator;
 import org.eclipse.rdf4j.query.algebra.Union;
 import org.eclipse.rdf4j.query.algebra.ValueConstant;
 import org.eclipse.rdf4j.query.algebra.ValueExpr;
@@ -115,11 +106,129 @@ import org.eclipse.rdf4j.query.algebra.helpers.collectors.StatementPatternCollec
 import org.eclipse.rdf4j.query.algebra.helpers.collectors.VarNameCollector;
 import org.eclipse.rdf4j.query.impl.ListBindingSet;
 import org.eclipse.rdf4j.query.parser.sparql.aggregate.CustomAggregateFunctionRegistry;
-import org.eclipse.rdf4j.query.parser.sparql.ast.*;
-
-import static org.eclipse.rdf4j.query.algebra.TripleComponent.Role.OBJECT;
-import static org.eclipse.rdf4j.query.algebra.TripleComponent.Role.PREDICATE;
-import static org.eclipse.rdf4j.query.algebra.TripleComponent.Role.SUBJECT;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTAbs;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTAnd;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTAskQuery;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTAvg;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTBNodeFunc;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTBind;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTBindingSet;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTBindingValue;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTBindingsClause;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTBlankNode;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTBlankNodePropertyList;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTBound;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTCeil;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTCoalesce;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTCollection;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTCompare;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTConcat;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTConstTripleRef;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTConstraint;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTConstruct;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTConstructQuery;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTContains;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTCount;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTDatatype;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTDay;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTDescribe;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTDescribeQuery;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTEncodeForURI;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTExistsFunc;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTFalse;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTFloor;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTFunctionCall;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTGraphGraphPattern;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTGraphPatternGroup;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTGroupClause;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTGroupConcat;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTGroupCondition;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTHavingClause;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTHours;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTIRI;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTIRIFunc;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTIf;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTIn;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTInfix;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTInlineData;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTIsBlank;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTIsIRI;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTIsLiteral;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTIsNumeric;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTLang;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTLangMatches;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTLimit;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTLowerCase;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTMD5;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTMath;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTMax;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTMin;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTMinusGraphPattern;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTMinutes;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTMonth;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTNot;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTNotExistsFunc;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTNotIn;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTNow;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTNumericLiteral;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTObjectList;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTOffset;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTOptionalGraphPattern;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTOr;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTOrderClause;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTOrderCondition;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTPathAlternative;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTPathElt;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTPathMod;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTPathNegatedPropertySet;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTPathOneInPropertySet;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTPathSequence;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTProjectionElem;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTPropertyList;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTPropertyListPath;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTQName;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTQueryContainer;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTRDFLiteral;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTRand;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTRegexExpression;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTReplace;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTRound;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTSHA1;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTSHA224;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTSHA256;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTSHA384;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTSHA512;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTSTRUUID;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTSameTerm;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTSample;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTSeconds;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTSelect;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTSelectQuery;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTServiceGraphPattern;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTStr;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTStrAfter;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTStrBefore;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTStrDt;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTStrEnds;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTStrLang;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTStrLen;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTStrStarts;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTString;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTSubstr;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTSum;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTTimezone;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTTripleRef;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTTriplesSameSubjectPath;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTTrue;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTTz;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTUUID;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTUnionGraphPattern;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTUpperCase;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTVar;
+import org.eclipse.rdf4j.query.parser.sparql.ast.ASTYear;
+import org.eclipse.rdf4j.query.parser.sparql.ast.Node;
+import org.eclipse.rdf4j.query.parser.sparql.ast.SimpleNode;
+import org.eclipse.rdf4j.query.parser.sparql.ast.VisitorException;
 
 /**
  * A SPARQL AST visitor implementation that creates a query algebra representation of the query.
@@ -134,18 +243,6 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 	// static UUID as prefix together with a thread safe incrementing long ensures a unique identifier.
 	private final static String uniqueIdPrefix = UUID.randomUUID().toString().replace("-", "");
 	private final static AtomicLong uniqueIdSuffix = new AtomicLong();
-	protected final static Var REIFIES_VAR = new Var(RDF.REIFIES.getLocalName(), RDF.REIFIES, false, true);
-	// Aggregate functions are not allowed inside aggregate functions.
-	// See SPARQL 1.1 errata: https://www.w3.org/2013/sparql-errata
-	// "Need to note that aggregate functions are not allowed inside aggregate functions
-	// - add a note to the grammar notes (19.8)."
-	private boolean inAggregate;
-	private final Map<String, Var> reifiedTripleExprVars = new HashMap<>();
-	private final Map<String, Var> reifiedTripleReifVars = new HashMap<>();
-
-	private String reifiedTripleKey(Var s, Var p, Var o) {
-		return s.getName() + "|" + p.getName() + "|" + o.getName();
-	}
 
 	/*-----------*
 	 * Variables *
@@ -182,9 +279,6 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 			return ((Var) valueExpr).clone();
 		} else if (valueExpr instanceof ValueConstant) {
 			return TupleExprs.createConstVar(((ValueConstant) valueExpr).getValue());
-		} else if (valueExpr instanceof ReifiedTripleRef) {
-			ReifiedTripleRef ret = (ReifiedTripleRef) valueExpr;
-			return ret.getReifVar().clone();
 		} else if (valueExpr instanceof TripleRef) {
 			// Return a clone to prevent the Var object from being used in more than one place.
 			return ((TripleRef) valueExpr).getExprVar().clone();
@@ -192,42 +286,6 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 			throw new IllegalArgumentException("valueExpr is null");
 		} else {
 			throw new IllegalArgumentException("valueExpr is a: " + valueExpr.getClass());
-		}
-	}
-
-	/**
-	 * Maps the given ValueExpr to a Var for use as a component of a triple term construction.
-	 * <ul>
-	 * <li>If the supplied ValueExpr is a {@link Var}, the object itself is returned.</li>
-	 * <li>If it is a {@link ValueConstant}, a constant variable is created via
-	 * {@link TupleExprs#createConstVar(Value)}.</li>
-	 * <li>If it is a {@link UnaryValueOperator} (e.g. {@link Str}, {@link Lang}, {@link Datatype}), an anonymous
-	 * variable is created and the expression is registered as an {@link ExtensionElem} on the current graph pattern, so
-	 * that the expression is evaluated at runtime and its result bound to the returned var.</li>
-	 * </ul>
-	 *
-	 * @param expr the ValueExpr to map to a Var
-	 * @return a Var representing the given expression
-	 * @throws IllegalArgumentException if the supplied ValueExpr is null or of an unexpected type
-	 */
-	private Var toVar(ValueExpr expr) {
-		if (expr instanceof Var) {
-			return (Var) expr;
-		} else if (expr instanceof ValueConstant) {
-			return TupleExprs.createConstVar(((ValueConstant) expr).getValue());
-		} else if (expr instanceof UnaryValueOperator) {
-			Var var = createAnonVar();
-			// Add to the current graph pattern's extension elements list,
-			// not as a new isolated Extension node
-			graphPattern.addRequiredTE(
-					new Extension(
-							graphPattern.buildTupleExpr(), // wrap the EXISTING pattern, not SingletonSet
-							new ExtensionElem(expr, var.getName())
-					)
-			);
-			return var;
-		} else {
-			throw new IllegalArgumentException("Unexpected expression type: " + expr.getClass().getName());
 		}
 	}
 
@@ -1316,15 +1374,6 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 		for (ValueExpr object : objectList) {
 			Var objVar = mapValueExprToVar(object);
 			graphPattern.addRequiredSP(subjVar.clone(), predVar.clone(), objVar);
-
-			// handle annotation if present
-			ASTPropertyList annotation = propListNode.getAnnotation();
-			if (annotation != null) {
-				Var reifVar = buildReifiedTripleVar(propListNode.getReifier(), subjVar, predVar, objVar);
-
-				// annotation's PropertyList with reifVar as subject
-				annotation.jjtAccept(this, reifVar);
-			}
 		}
 
 		ASTPropertyList nextPropList = propListNode.getNextPropertyList();
@@ -1509,42 +1558,6 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 		return pathElementExpression;
 	}
 
-	protected Var buildReifiedTripleVar(Object reifier, Var subjVar, Var predVar, Var objVar) throws VisitorException {
-		ReifiedTripleRef ref = buildReifiedTripleRef(subjVar, predVar, objVar, reifier);
-		graphPattern = new GraphPattern(graphPattern);
-		graphPattern.addRequiredTE(ref);
-		graphPattern.addRequiredSP(ref.getReifVar().clone(), REIFIES_VAR.clone(), ref.getExprVar().clone());
-
-		return ref.getReifVar();
-	}
-
-	protected ReifiedTripleRef buildReifiedTripleRef(Var subjVar, Var predVar, Var objVar, Object reifier)
-			throws VisitorException {
-		ReifiedTripleRef rtr = new ReifiedTripleRef();
-		rtr.setSubjectVar(subjVar.clone());
-		rtr.setPredicateVar(predVar.clone());
-		rtr.setObjectVar(objVar.clone());
-		rtr.setExprVar(createAnonVar());
-		rtr.setReifVar(getReifVar(reifier));
-		return rtr;
-	}
-
-	private Var getReifVar(Object reifier) throws VisitorException {
-		Var reifVar;
-		if (reifier == null) {
-			reifVar = createAnonVar();
-		} else {
-			if (reifier instanceof ASTVar) {
-				reifVar = mapValueExprToVar(((ASTVar) reifier).jjtAccept(this, null));
-			} else if (reifier instanceof ASTIRI) {
-				reifVar = mapValueExprToVar(((ASTIRI) reifier).jjtAccept(this, null));
-			} else {
-				throw new VisitorException("Unexpected reifier type: " + reifier.getClass());
-			}
-		}
-		return reifVar;
-	}
-
 	private TupleExpr createTupleExprForNegatedPropertySets(List<PropertySetElem> nps,
 			PathSequenceContext pathSequenceContext) {
 		Var subjVar = pathSequenceContext.startVar;
@@ -1702,8 +1715,6 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 	@Override
 	public Object visit(ASTPropertyListPath propListNode, Object data) throws VisitorException {
 		Object verbPath = propListNode.getVerb().jjtAccept(this, data);
-		ASTPropertyListPath annotation = propListNode.getAnnotation();
-		Object reifier = propListNode.getReifier();
 
 		if (verbPath instanceof Var) {
 
@@ -1715,17 +1726,8 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 			for (ValueExpr object : objectList) {
 				Var objVar = mapValueExprToVar(object);
 				graphPattern.addRequiredSP(subjVar.clone(), predVar.clone(), objVar);
-				if (annotation != null) {
-					annotation.jjtAccept(this, buildReifiedTripleVar(reifier, subjVar, predVar, objVar));
-				}
 			}
 		} else if (verbPath instanceof TupleExpr) {
-			if (annotation != null) {
-				StatementPattern sp = (StatementPattern) verbPath;
-				annotation.jjtAccept(this,
-						buildReifiedTripleVar(reifier, sp.getSubjectVar(), sp.getPredicateVar(), sp.getObjectVar()));
-			}
-
 			graphPattern.addRequiredTE((TupleExpr) verbPath);
 		}
 
@@ -1746,8 +1748,6 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 			Object obj = node.jjtGetChild(i).jjtAccept(this, null);
 			if (obj instanceof ValueExpr) {
 				result.add((ValueExpr) obj);
-			} else if (obj instanceof ReifiedTripleRef) {
-				result.add(((ReifiedTripleRef) obj).getReifVar());
 			} else if (obj instanceof TripleRef) {
 				result.add(((TripleRef) obj).getExprVar());
 			}
@@ -1771,10 +1771,10 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 
 		int childCount = node.jjtGetNumChildren();
 		for (int i = 0; i < childCount; i++) {
-			Var childValue = mapValueExprToVar(node.jjtGetChild(i).jjtAccept(this, null));
+			ValueExpr childValue = (ValueExpr) node.jjtGetChild(i).jjtAccept(this, null);
 
 			graphPattern.addRequiredSP(listVar.clone(), TupleExprs.createConstVar(RDF.FIRST),
-					childValue);
+					mapValueExprToVar(childValue));
 
 			Var nextListVar;
 			if (i == childCount - 1) {
@@ -1800,15 +1800,15 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 
 	@Override
 	public Or visit(ASTOr node, Object data) throws VisitorException {
-		ValueExpr leftArg = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, null));
-		ValueExpr rightArg = castToValueExpr(node.jjtGetChild(1).jjtAccept(this, null));
+		ValueExpr leftArg = (ValueExpr) node.jjtGetChild(0).jjtAccept(this, null);
+		ValueExpr rightArg = (ValueExpr) node.jjtGetChild(1).jjtAccept(this, null);
 		return new Or(leftArg, rightArg);
 	}
 
 	@Override
 	public Object visit(ASTAnd node, Object data) throws VisitorException {
-		ValueExpr leftArg = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, null));
-		ValueExpr rightArg = castToValueExpr(node.jjtGetChild(1).jjtAccept(this, null));
+		ValueExpr leftArg = (ValueExpr) node.jjtGetChild(0).jjtAccept(this, null);
+		ValueExpr rightArg = (ValueExpr) node.jjtGetChild(1).jjtAccept(this, null);
 		return new And(leftArg, rightArg);
 	}
 
@@ -1825,7 +1825,7 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 		int noOfArgs = node.jjtGetNumChildren();
 
 		for (int i = 0; i < noOfArgs; i++) {
-			ValueExpr arg = castToValueExpr(node.jjtGetChild(i).jjtAccept(this, data));
+			ValueExpr arg = (ValueExpr) node.jjtGetChild(i).jjtAccept(this, data);
 			coalesce.addArgument(arg);
 		}
 
@@ -1834,8 +1834,8 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 
 	@Override
 	public Compare visit(ASTCompare node, Object data) throws VisitorException {
-		ValueExpr leftArg = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, null));
-		ValueExpr rightArg = castToValueExpr(node.jjtGetChild(1).jjtAccept(this, null));
+		ValueExpr leftArg = (ValueExpr) node.jjtGetChild(0).jjtAccept(this, null);
+		ValueExpr rightArg = (ValueExpr) node.jjtGetChild(1).jjtAccept(this, null);
 		return new Compare(leftArg, rightArg, node.getOperator());
 	}
 
@@ -1881,14 +1881,14 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 
 	@Override
 	public SameTerm visit(ASTSameTerm node, Object data) throws VisitorException {
-		ValueExpr leftArg = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, null));
-		ValueExpr rightArg = castToValueExpr(node.jjtGetChild(1).jjtAccept(this, null));
+		ValueExpr leftArg = (ValueExpr) node.jjtGetChild(0).jjtAccept(this, null);
+		ValueExpr rightArg = (ValueExpr) node.jjtGetChild(1).jjtAccept(this, null);
 		return new SameTerm(leftArg, rightArg);
 	}
 
 	@Override
 	public Sample visit(ASTSample node, Object data) throws VisitorException {
-		ValueExpr ve = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, data));
+		ValueExpr ve = (ValueExpr) node.jjtGetChild(0).jjtAccept(this, data);
 
 		return new Sample(ve, node.isDistinct());
 
@@ -1896,8 +1896,8 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 
 	@Override
 	public MathExpr visit(ASTMath node, Object data) throws VisitorException {
-		ValueExpr leftArg = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, null));
-		ValueExpr rightArg = castToValueExpr(node.jjtGetChild(1).jjtAccept(this, null));
+		ValueExpr leftArg = (ValueExpr) node.jjtGetChild(0).jjtAccept(this, null);
+		ValueExpr rightArg = (ValueExpr) node.jjtGetChild(1).jjtAccept(this, null);
 		return new MathExpr(leftArg, rightArg, node.getOperator());
 	}
 
@@ -2083,32 +2083,6 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 	}
 
 	@Override
-	public LangDir visit(ASTLangDirFunc node, Object data) throws VisitorException {
-		ValueExpr arg = mapValueExprToVar(node.jjtGetChild(0).jjtAccept(this, null));
-		return new LangDir(arg);
-	}
-
-	@Override
-	public StrLangDir visit(ASTStrLangDirFunc node, Object data) throws VisitorException {
-		ValueExpr lexicalFormArg = mapValueExprToVar(node.jjtGetChild(0).jjtAccept(this, null));
-		ValueExpr langArg = mapValueExprToVar(node.jjtGetChild(1).jjtAccept(this, null));
-		ValueExpr dirArg = mapValueExprToVar(node.jjtGetChild(2).jjtAccept(this, null));
-		return new StrLangDir(lexicalFormArg, langArg, dirArg);
-	}
-
-	@Override
-	public HasLang visit(ASTHasLangFunc node, Object data) throws VisitorException {
-		ValueExpr arg = mapValueExprToVar(node.jjtGetChild(0).jjtAccept(this, null));
-		return new HasLang(arg);
-	}
-
-	@Override
-	public HasLangDir visit(ASTHasLangDirFunc node, Object data) throws VisitorException {
-		ValueExpr arg = mapValueExprToVar(node.jjtGetChild(0).jjtAccept(this, null));
-		return new HasLangDir(arg);
-	}
-
-	@Override
 	public Datatype visit(ASTDatatype node, Object data) throws VisitorException {
 		ValueExpr arg = (ValueExpr) node.jjtGetChild(0).jjtAccept(this, null);
 		return new Datatype(arg);
@@ -2134,10 +2108,7 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 		for (ASTVar varNode : varNodes) {
 			Var var = (Var) varNode.jjtAccept(this, data);
 			vars.add(var);
-			if (!bindingNames.add(var.getName())) {
-				throw new VisitorException(
-						"Duplicate variable ?" + var.getName() + " in VALUES clause");
-			}
+			bindingNames.add(var.getName());
 		}
 
 		bsa.setBindingNames(bindingNames);
@@ -2502,15 +2473,7 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 			}
 			literal = valueFactory.createLiteral(label, datatype);
 		} else if (lang != null) {
-			int sep = lang.indexOf(Literal.BASE_DIR_SEPARATOR);
-			if (sep >= 0) {
-				String langOnly = lang.substring(0, sep);
-				String dirSuffix = lang.substring(sep);
-				Literal.BaseDirection dir = Literal.BaseDirection.fromString(dirSuffix);
-				literal = valueFactory.createLiteral(label, langOnly, dir);
-			} else {
-				literal = valueFactory.createLiteral(label, lang);
-			}
+			literal = valueFactory.createLiteral(label, lang);
 		} else {
 			literal = valueFactory.createLiteral(label);
 		}
@@ -2541,19 +2504,11 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 
 	@Override
 	public Object visit(ASTCount node, Object data) throws VisitorException {
-		if (inAggregate) {
-			throw new VisitorException("Nested aggregates are not allowed");
+		ValueExpr ve = null;
+		if (node.jjtGetNumChildren() > 0) {
+			ve = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, data));
 		}
-		try {
-			ValueExpr ve = null;
-			inAggregate = true;
-			if (node.jjtGetNumChildren() > 0) {
-				ve = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, data));
-			}
-			return new Count(ve, node.isDistinct());
-		} finally {
-			inAggregate = false;
-		}
+		return new Count(ve, node.isDistinct());
 	}
 
 	@Override
@@ -2572,62 +2527,30 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 
 	@Override
 	public Object visit(ASTMax node, Object data) throws VisitorException {
-		if (inAggregate) {
-			throw new VisitorException("Nested aggregates are not allowed");
-		}
-		try {
-			inAggregate = true;
-			ValueExpr ve = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, data));
+		ValueExpr ve = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, data));
 
-			return new Max(ve, node.isDistinct());
-		} finally {
-			inAggregate = false;
-		}
+		return new Max(ve, node.isDistinct());
 	}
 
 	@Override
 	public Object visit(ASTMin node, Object data) throws VisitorException {
-		if (inAggregate) {
-			throw new VisitorException("Nested aggregates are not allowed");
-		}
-		try {
-			inAggregate = true;
-			ValueExpr ve = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, data));
+		ValueExpr ve = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, data));
 
-			return new Min(ve, node.isDistinct());
-		} finally {
-			inAggregate = false;
-		}
+		return new Min(ve, node.isDistinct());
 	}
 
 	@Override
 	public Object visit(ASTSum node, Object data) throws VisitorException {
-		if (inAggregate) {
-			throw new VisitorException("Nested aggregates are not allowed");
-		}
-		try {
-			inAggregate = true;
-			ValueExpr ve = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, data));
+		ValueExpr ve = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, data));
 
-			return new Sum(ve, node.isDistinct());
-		} finally {
-			inAggregate = false;
-		}
+		return new Sum(ve, node.isDistinct());
 	}
 
 	@Override
 	public Object visit(ASTAvg node, Object data) throws VisitorException {
-		if (inAggregate) {
-			throw new VisitorException("Nested aggregates are not allowed");
-		}
-		try {
-			inAggregate = true;
-			ValueExpr ve = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, data));
+		ValueExpr ve = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, data));
 
-			return new Avg(ve, node.isDistinct());
-		} finally {
-			inAggregate = false;
-		}
+		return new Avg(ve, node.isDistinct());
 	}
 
 	static class AggregateCollector extends AbstractQueryModelVisitor<VisitorException> {
@@ -2759,59 +2682,24 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 	}
 
 	@Override
-	public TupleExpr visit(ASTReifiedTriple node, Object data) throws VisitorException {
-		ReifiedTripleRef ref = new ReifiedTripleRef();
-		ref.setSubjectVar(mapValueExprToVar(node.getSubj().jjtAccept(this, ref)));
-		ref.setPredicateVar(mapValueExprToVar(node.getPred().jjtAccept(this, ref)));
-		ref.setObjectVar(mapValueExprToVar(node.getObj().jjtAccept(this, ref)));
-
-		// Determine reifVar: explicit reifier takes priority, otherwise anon
-		Var reifVar;
-		if (node.getReifier() != null) {
-			reifVar = mapValueExprToVar(node.getReifier().jjtAccept(this, ref));
-		} else {
-			// No explicit reifier — check if same s/p/o pattern seen before
-			String key = reifiedTripleKey(ref.getSubjectVar(), ref.getPredicateVar(), ref.getObjectVar());
-			Var existingReifVar = reifiedTripleReifVars.get(key);
-			if (existingReifVar != null) {
-				// Reuse same reifVar — forces same reifier node, enforcing same triple term
-				reifVar = existingReifVar;
-			} else {
-				reifVar = createAnonVar();
-				Var exprVar = createAnonVar();
-				reifiedTripleReifVars.put(key, reifVar);
-				reifiedTripleExprVars.put(key, exprVar);
-			}
-		}
-
-		// Reuse exprVar for same anonymous s/p/o pattern
-		String key = reifiedTripleKey(ref.getSubjectVar(), ref.getPredicateVar(), ref.getObjectVar());
-		Var exprVar = node.getReifier() != null
-				? createAnonVar() // explicit reifier: always fresh exprVar
-				: reifiedTripleExprVars.getOrDefault(key, createAnonVar());
-
-		ref.setExprVar(exprVar.clone());
-		ref.setReifVar(reifVar.clone());
-
-		graphPattern = new GraphPattern(graphPattern);
-		graphPattern.addRequiredTE(ref);
-		graphPattern.addRequiredSP(ref.getReifVar().clone(), REIFIES_VAR.clone(), ref.getExprVar().clone());
-
-		return ref;
-	}
-
-	@Override
-	public TupleExpr visit(ASTTripleTerm node, Object data) throws VisitorException {
-		TripleRef ret = constructTripleRefFromAST(node);
-		graphPattern = new GraphPattern(graphPattern);
-		graphPattern.addRequiredSP(createAnonVar(), REIFIES_VAR.clone(), ret.getExprVar().clone());
+	public TupleExpr visit(ASTTripleRef node, Object data) throws VisitorException {
+		TripleRef ret = new TripleRef();
+		ret.setSubjectVar(mapValueExprToVar(node.getSubj().jjtAccept(this, ret)));
+		ret.setPredicateVar(mapValueExprToVar(node.getPred().jjtAccept(this, ret)));
+		ret.setObjectVar(mapValueExprToVar(node.getObj().jjtAccept(this, ret)));
+		ret.setExprVar(createAnonVar());
 		graphPattern.addRequiredTE(ret);
 
 		return ret;
 	}
 
 	@Override
-	public Object visit(ASTConstTripleTerm node, Object data) throws VisitorException {
+	public Object visit(ASTTriplesSameSubjectPath node, Object data) throws VisitorException {
+		return super.visit(node, data);
+	}
+
+	@Override
+	public ValueConstant visit(ASTConstTripleRef node, Object data) throws VisitorException {
 		TripleTerm tripleTerm;
 		Resource subject = (Resource) ((ValueConstant) node.getSubj().jjtAccept(this, data)).getValue();
 		IRI predicate = (IRI) ((ValueConstant) node.getPred().jjtAccept(this, data)).getValue();
@@ -2822,60 +2710,8 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 			// invalid URI
 			throw new VisitorException(e.getMessage());
 		}
+
 		return new ValueConstant(tripleTerm);
-	}
-
-	@Override
-	public IsTriple visit(ASTIsTriple node, Object data) throws VisitorException {
-		return new IsTriple((ValueExpr) node.childrenAccept(this, data));
-	}
-
-	@Override
-	public ValueExprTripleRef visit(ASTTripleFunc node, Object data) throws VisitorException {
-		// Visit the 3 child expressions
-		ValueExpr subjectExpr = castToValueExpr(node.getSubj().jjtAccept(this, data));
-		ValueExpr predicateExpr = castToValueExpr(node.getPred().jjtAccept(this, data));
-		ValueExpr objectExpr = castToValueExpr(node.getObj().jjtAccept(this, data));
-
-		// Map each ValueExpr to a Var (same as how triple terms are built in the AST visitor)
-		Var s = toVar(subjectExpr);
-		Var p = toVar(predicateExpr);
-		Var o = toVar(objectExpr);
-
-		// Create a fresh anonymous variable to hold the result triple term
-		Var exprVar = createAnonVar();
-
-		return new ValueExprTripleRef(exprVar.getName(), s, p, o);
-	}
-
-	@Override
-	public TripleComponent visit(ASTSubjectFunc node, Object data) throws VisitorException {
-		var tripleTermExpr = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, data));
-		Var tripleTermVar = mapValueExprToVar(tripleTermExpr);
-		return new TripleComponent(tripleTermVar, SUBJECT);
-	}
-
-	@Override
-	public TripleComponent visit(ASTPredicateFunc node, Object data) throws VisitorException {
-		var tripleTermExpr = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, data));
-		Var tripleTermVar = mapValueExprToVar(tripleTermExpr);
-		return new TripleComponent(tripleTermVar, PREDICATE);
-	}
-
-	@Override
-	public TripleComponent visit(ASTObjectFunc node, Object data) throws VisitorException {
-		var tripleTermExpr = castToValueExpr(node.jjtGetChild(0).jjtAccept(this, data));
-		Var tripleTermVar = mapValueExprToVar(tripleTermExpr);
-		return new TripleComponent(tripleTermVar, OBJECT);
-	}
-
-	protected TripleRef constructTripleRefFromAST(ASTTripleTerm node) throws VisitorException {
-		TripleRef ret = new TripleRef();
-		ret.setSubjectVar(mapValueExprToVar(node.getSubj().jjtAccept(this, ret)));
-		ret.setPredicateVar(mapValueExprToVar(node.getPred().jjtAccept(this, ret)));
-		ret.setObjectVar(mapValueExprToVar(node.getObj().jjtAccept(this, ret)));
-		ret.setExprVar(createAnonVar());
-		return ret;
 	}
 
 	/**

@@ -78,14 +78,8 @@ public class QueryEvaluationUtil {
 			if (datatype == CoreDatatype.XSD.STRING) {
 				return !label.isEmpty();
 			} else if (datatype == CoreDatatype.XSD.BOOLEAN) {
-				if ("true".equals(label) || "1".equals(label)) {
-					return true;
-				} else if ("false".equals(label) || "0".equals(label)) {
-					return false;
-				} else {
-					// ill-typed literal — "z"^^xsd:boolean must be a type error per SPARQL spec
-					throw new ValueExprEvaluationException();
-				}
+				// also false for illegal values
+				return "true".equals(label) || "1".equals(label);
 			} else if (datatype == CoreDatatype.XSD.DECIMAL) {
 				try {
 					String normDec = XMLDatatypeUtil.normalizeDecimal(label);

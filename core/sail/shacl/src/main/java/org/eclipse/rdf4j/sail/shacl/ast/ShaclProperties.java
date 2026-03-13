@@ -643,7 +643,7 @@ public class ShaclProperties {
 		} else if (object.isBNode()) {
 			actualClassName = "BNode";
 		} else if (object.isTripleTerm()) {
-			actualClassName = "triple";
+			actualClassName = "TripleTerm";
 		} else {
 			assert false;
 			actualClassName = object.getClass().getSimpleName();
