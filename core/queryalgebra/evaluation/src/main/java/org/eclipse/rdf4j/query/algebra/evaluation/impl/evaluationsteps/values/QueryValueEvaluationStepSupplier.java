@@ -251,7 +251,7 @@ public class QueryValueEvaluationStepSupplier {
 
 		String lex = ((Literal) lexValue).getLabel();
 		String lang = ((Literal) langValue).getLabel();
-		String dir = ((Literal) dirValue).getLabel().toLowerCase();
+		String dir = ((Literal) dirValue).getLabel();
 
 		if (!dir.equals("ltr") && !dir.equals("rtl")) {
 			throw new ValueExprEvaluationException(
