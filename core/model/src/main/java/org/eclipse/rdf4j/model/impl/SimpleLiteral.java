@@ -255,12 +255,15 @@ public class SimpleLiteral extends AbstractLiteral {
 			Optional<String> otherLanguage = other.getLanguage();
 
 			if (language.isPresent() && otherLanguage.isPresent()) {
-				return language.get().equalsIgnoreCase(otherLanguage.get());
+				if (!language.get().equalsIgnoreCase(otherLanguage.get())) {
+					return false;
+				}
+			} else if (language.isPresent() || otherLanguage.isPresent()) {
+				return false;
 			}
-			// If only one has a language, then return false
-			else {
-				return language.isEmpty() && otherLanguage.isEmpty();
-			}
+
+			// [LANGDIR] Compare base direction
+			return getBaseDirection() == other.getBaseDirection();
 		}
 
 		return false;
@@ -269,7 +272,10 @@ public class SimpleLiteral extends AbstractLiteral {
 	// overrides Object.hashCode(), implements Literal.hashCode()
 	@Override
 	public int hashCode() {
-		return label.hashCode();
+		int result = label.hashCode();
+		result = 31 * result + (language != null ? language.toLowerCase().hashCode() : 0);
+		result = 31 * result + (baseDirection != null ? baseDirection.hashCode() : 0);
+		return result;
 	}
 
 	/**
