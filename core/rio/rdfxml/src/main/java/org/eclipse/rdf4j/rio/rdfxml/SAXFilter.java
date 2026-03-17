@@ -1,14 +1,16 @@
 /*******************************************************************************
  * Copyright (c) 2015 Eclipse RDF4J contributors, Aduna, and others.
- *
+ * <p>
  * All rights reserved. This program and the accompanying materials
  * are made available under the terms of the Eclipse Distribution License v1.0
  * which accompanies this distribution, and is available at
  * http://www.eclipse.org/org/documents/edl-v10.php.
- *
+ * <p>
  * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
 package org.eclipse.rdf4j.rio.rdfxml;
+
+import static org.eclipse.rdf4j.rio.rdfxml.RDFXMLParser.ITS_NAMESPACE;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -114,6 +116,8 @@ class SAXFilter implements ContentHandler {
 	 */
 	private final List<String> unknownPrefixesInXMLLiteral = new ArrayList<>();
 
+	private Map<String, String> xmlLiteralContextNamespaces;
+
 	/*--------------*
 	 * Constructors *
 	 *--------------*/
@@ -157,10 +161,6 @@ class SAXFilter implements ContentHandler {
 
 	public void setParseStandAloneDocuments(boolean standAloneDocs) {
 		parseStandAloneDocuments = standAloneDocs;
-	}
-
-	public boolean getParseStandAloneDocuments() {
-		return parseStandAloneDocuments;
 	}
 
 	/*---------------------------------------*
@@ -267,6 +267,36 @@ class SAXFilter implements ContentHandler {
 
 					// Check if we are entering RDF context now.
 					if (localName.equals("RDF") && namespaceURI.equals(RDF.NAMESPACE)) {
+
+						// Detect RDF 1.2
+						for (int i = 0; i < attributes.getLength(); i++) {
+							String attURI = attributes.getURI(i);
+							String attLocal = attributes.getLocalName(i);
+
+							if (RDF.NAMESPACE.equals(attURI) && "version".equals(attLocal)) {
+								String value = attributes.getValue(i);
+								if ("1.2".equals(value)) {
+									rdfParser.setRdf12Mode();
+								}
+							}
+						}
+
+						// Detect ITS 1.0/1.2 directional literals
+						for (int i = 0; i < attributes.getLength(); i++) {
+							String attURI = attributes.getURI(i);
+							String attLocal = attributes.getLocalName(i);
+
+							if (ITS_NAMESPACE.equals(attURI) && "dir".equals(attLocal)) {
+								String dirValue = attributes.getValue(i);
+								if (!rdfParser.getRdf12Mode()) {
+									dirValue = null;
+								}
+								if (dirValue != null) {
+									rdfParser.setDefaultBaseDirection(dirValue);
+								}
+							}
+						}
+
 						inRDFContext = true;
 						rdfContextStackHeight = 0;
 					}
@@ -368,7 +398,7 @@ class SAXFilter implements ContentHandler {
 				if (parseLiteralMode) {
 					// Insert any used namespace prefixes from the XML literal's
 					// context that are not defined in the XML literal itself.
-					insertUsedContextPrefixes();
+					insertContextNamespaces();
 
 					rdfParser.text(charBuf.toString());
 
@@ -388,7 +418,7 @@ class SAXFilter implements ContentHandler {
 				elInfoStack.pop();
 				rdfContextStackHeight--;
 
-				rdfParser.endElement(namespaceURI, localName, qName);
+				rdfParser.endElement();
 			}
 		} catch (RDFParseException | RDFHandlerException e) {
 			throw new SAXException(e);
@@ -450,7 +480,7 @@ class SAXFilter implements ContentHandler {
 	}
 
 	private void checkAndCopyAttributes(Attributes attributes, ElementInfo elInfo)
-			throws SAXException, RDFParseException {
+			throws RDFParseException {
 		Atts atts = new Atts(attributes.getLength());
 
 		int attCount = attributes.getLength();
@@ -501,6 +531,16 @@ class SAXFilter implements ContentHandler {
 		// new for this XML literal.
 		xmlLiteralPrefixes.clear();
 		unknownPrefixesInXMLLiteral.clear();
+		xmlLiteralContextNamespaces = new LinkedHashMap<>();
+		ElementInfo top = peekStack();
+		while (top != null) {
+			if (top.namespaceMap != null) {
+				for (Map.Entry<String, String> e : top.namespaceMap.entrySet()) {
+					xmlLiteralContextNamespaces.putIfAbsent(e.getKey(), e.getValue());
+				}
+			}
+			top = top.parent;
+		}
 	}
 
 	private ParsedIRI createBaseURI(String uriString) {
@@ -516,7 +556,7 @@ class SAXFilter implements ContentHandler {
 	 */
 	private void appendStartTag(String qName, Attributes attributes) {
 		// Write start of start tag
-		charBuf.append("<" + qName);
+		charBuf.append("<").append(qName);
 
 		// Write any new namespace prefix definitions
 		for (Map.Entry<String, String> entry : newNamespaceMappings.entrySet()) {
@@ -548,51 +588,41 @@ class SAXFilter implements ContentHandler {
 	 * Appends an end tag to charBuf. This method is used during the parsing of an XML Literal.
 	 */
 	private void appendEndTag(String qName) {
-		charBuf.append("</" + qName + ">");
+		charBuf.append("</").append(qName).append(">");
 	}
 
 	/**
 	 * Inserts prefix mappings from an XML Literal's context for all prefixes that are used in the XML Literal and that
 	 * are not defined in the XML Literal itself.
 	 */
-	private void insertUsedContextPrefixes() {
-		int unknownPrefixesCount = unknownPrefixesInXMLLiteral.size();
+	private void insertContextNamespaces() {
 
-		if (unknownPrefixesCount > 0) {
-			// Create a String with all needed context prefixes
-			StringBuilder contextPrefixes = new StringBuilder(1024);
-			ElementInfo topElement = peekStack();
-
-			for (int i = 0; i < unknownPrefixesCount; i++) {
-				String prefix = unknownPrefixesInXMLLiteral.get(i);
-				String namespace = topElement.getNamespace(prefix);
-				if (namespace != null) {
-					appendNamespaceDecl(contextPrefixes, prefix, namespace);
-				}
-			}
-
-			int i = 0;
-			int opentag = 0;
-			while (i < charBuf.length()) {
-				char ch = charBuf.charAt(i);
-				if (ch == '<') {
-					if ((i + 1) < charBuf.length()) {
-						char nextChar = charBuf.charAt(i + 1);
-						if (nextChar != '/' && opentag == 0) {
-							opentag++;
-							int endOfFirstStartTag = charBuf.substring(i).indexOf(">");
-							charBuf.insert(endOfFirstStartTag + i, contextPrefixes.toString());
-						} else {
-							opentag--;
-						}
-					}
-				}
-				i += 1;
-			}
-
+		if (xmlLiteralContextNamespaces == null || xmlLiteralContextNamespaces.isEmpty()) {
+			return;
 		}
 
-		unknownPrefixesInXMLLiteral.clear();
+		StringBuilder contextDecls = new StringBuilder(1024);
+
+		for (Map.Entry<String, String> entry : xmlLiteralContextNamespaces.entrySet()) {
+			String prefix = entry.getKey();
+			String namespace = entry.getValue();
+			appendNamespaceDecl(contextDecls, prefix, namespace);
+		}
+
+		// Inject into first start tag only
+		int i = 0;
+		while (i < charBuf.length()) {
+			if (charBuf.charAt(i) == '<') {
+				if (i + 1 < charBuf.length() && charBuf.charAt(i + 1) != '/') {
+					int endOfStartTag = charBuf.indexOf(">", i);
+					if (endOfStartTag > i) {
+						charBuf.insert(endOfStartTag, contextDecls);
+					}
+					break;
+				}
+			}
+			i++;
+		}
 	}
 
 	private void appendNamespaceDecl(StringBuilder sb, String prefix, String namespace) {
@@ -665,7 +695,7 @@ class SAXFilter implements ContentHandler {
 				this.xmlLang = parent.xmlLang;
 			} else {
 				this.baseURI = documentURI;
-				this.xmlLang = "";
+				this.xmlLang = null;
 			}
 		}
 
@@ -682,18 +712,5 @@ class SAXFilter implements ContentHandler {
 			}
 		}
 
-		public String getNamespace(String prefix) {
-			String result = null;
-
-			if (namespaceMap != null) {
-				result = namespaceMap.get(prefix);
-			}
-
-			if (result == null && parent != null) {
-				result = parent.getNamespace(prefix);
-			}
-
-			return result;
-		}
 	}
 }
