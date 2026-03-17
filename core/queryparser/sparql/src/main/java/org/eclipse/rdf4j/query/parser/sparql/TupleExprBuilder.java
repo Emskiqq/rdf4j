@@ -10,6 +10,10 @@
  *******************************************************************************/
 package org.eclipse.rdf4j.query.parser.sparql;
 
+import static org.eclipse.rdf4j.query.algebra.TripleComponent.Role.OBJECT;
+import static org.eclipse.rdf4j.query.algebra.TripleComponent.Role.PREDICATE;
+import static org.eclipse.rdf4j.query.algebra.TripleComponent.Role.SUBJECT;
+
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -116,10 +120,6 @@ import org.eclipse.rdf4j.query.algebra.helpers.collectors.VarNameCollector;
 import org.eclipse.rdf4j.query.impl.ListBindingSet;
 import org.eclipse.rdf4j.query.parser.sparql.aggregate.CustomAggregateFunctionRegistry;
 import org.eclipse.rdf4j.query.parser.sparql.ast.*;
-
-import static org.eclipse.rdf4j.query.algebra.TripleComponent.Role.OBJECT;
-import static org.eclipse.rdf4j.query.algebra.TripleComponent.Role.PREDICATE;
-import static org.eclipse.rdf4j.query.algebra.TripleComponent.Role.SUBJECT;
 
 /**
  * A SPARQL AST visitor implementation that creates a query algebra representation of the query.
@@ -2793,9 +2793,8 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 		ref.setExprVar(exprVar.clone());
 		ref.setReifVar(reifVar.clone());
 
-		graphPattern = new GraphPattern(graphPattern);
-		graphPattern.addRequiredTE(ref);
 		graphPattern.addRequiredSP(ref.getReifVar().clone(), REIFIES_VAR.clone(), ref.getExprVar().clone());
+		graphPattern.addRequiredTE(ref);
 
 		return ref;
 	}
@@ -2803,8 +2802,6 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 	@Override
 	public TupleExpr visit(ASTTripleTerm node, Object data) throws VisitorException {
 		TripleRef ret = constructTripleRefFromAST(node);
-		graphPattern = new GraphPattern(graphPattern);
-		graphPattern.addRequiredSP(createAnonVar(), REIFIES_VAR.clone(), ret.getExprVar().clone());
 		graphPattern.addRequiredTE(ret);
 
 		return ret;
