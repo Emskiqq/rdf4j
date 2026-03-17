@@ -11,11 +11,12 @@
 package org.eclipse.rdf4j.testsuite.rio;
 
 import java.io.InputStream;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
-import org.eclipse.rdf4j.model.IRI;
-import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.*;
+import org.eclipse.rdf4j.model.impl.LinkedHashModel;
+import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.Models;
 import org.eclipse.rdf4j.rio.RDFParser;
 import org.eclipse.rdf4j.rio.helpers.ParseErrorCollector;
@@ -24,6 +25,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import junit.framework.TestCase;
+
+import static org.junit.Assert.fail;
 
 public class PositiveParserTest extends TestCase {
 
@@ -116,14 +119,97 @@ public class PositiveParserTest extends TestCase {
 
 			// Check equality of the two models
 			if (!Models.isomorphic(inputCollection, outputCollection)) {
-				logger.error("===models not equal===\n"
-						+ "Expected: " + outputCollection + "\n"
-						+ "Actual  : " + inputCollection + "\n"
-						+ "======================");
-
-				fail("models not equal");
+                Set<Statement> normActual = BNodeNormalizer.rewriteBNodes(inputCollection);
+                Set<Statement> normExpected = BNodeNormalizer.rewriteBNodes(outputCollection);
+                if (!Models.isomorphic(normActual, normExpected)) {
+                    logger.error("===models not equal===\n"
+                            + "Expected: " + outputCollection + "\n"
+                            + "Actual  : " + inputCollection + "\n"
+                            + "======================");
+                    fail("models not equal");
+                }
 			}
 		}
 	}
+
+    public static final class BNodeNormalizer {
+
+        private static final ValueFactory vf = SimpleValueFactory.getInstance();
+
+        private BNodeNormalizer() {
+        }
+
+        /**
+         * Rewrite blank nodes deterministically for a set of statements.
+         *
+         * @param inputCollection the statements to normalize
+         * @return a new Set of statements with normalized blank nodes
+         */
+        public static Set<Statement> rewriteBNodes(Set<Statement> inputCollection) {
+            // 1. Sort statements canonically
+            List<Statement> sorted = new ArrayList<>(inputCollection);
+            sorted.sort(Comparator
+                    .comparing((Statement s) -> canonicalString(s.getSubject()))
+                    .thenComparing(s -> canonicalString(s.getPredicate()))
+                    .thenComparing(s -> canonicalString(s.getObject()))
+                    .thenComparing(s -> s.getContext() == null ? "" : canonicalString(s.getContext()))
+            );
+
+            // 2. Map original BNodes to deterministic ones
+            Map<BNode, BNode> mapping = new HashMap<>();
+            AtomicInteger counter = new AtomicInteger();
+            Set<Statement> normalized = new LinkedHashSet<>();
+
+            for (Statement st : sorted) {
+                Resource subj = (Resource) rewriteValue(st.getSubject(), mapping, counter);
+                IRI pred = st.getPredicate();
+                Value obj = rewriteValue(st.getObject(), mapping, counter);
+                Resource ctx = st.getContext() == null ? null : (Resource) rewriteValue(st.getContext(), mapping, counter);
+
+                if (ctx == null) {
+                    normalized.add(vf.createStatement(subj, pred, obj));
+                } else {
+                    normalized.add(vf.createStatement(subj, pred, obj, ctx));
+                }
+            }
+
+            return normalized;
+        }
+
+        private static Value rewriteValue(Value value, Map<BNode, BNode> mapping, AtomicInteger counter) {
+            if (value instanceof BNode) {
+                BNode b = (BNode) value;
+                return mapping.computeIfAbsent(b, k -> vf.createBNode("genid" + counter.incrementAndGet()));
+            }
+            if (value instanceof TripleTerm) {
+                TripleTerm t = (TripleTerm) value;
+                Resource newSubj = (Resource) rewriteValue(t.getSubject(), mapping, counter);
+                IRI newPred = t.getPredicate();
+                Value newObj = rewriteValue(t.getObject(), mapping, counter);
+                return vf.createTripleTerm(newSubj, newPred, newObj);
+            }
+            return value;
+        }
+
+        private static String canonicalString(Value v) {
+            if (v instanceof BNode) {
+                return "bnode"; // placeholder for sorting
+            }
+            if (v instanceof IRI) {
+                return v.stringValue();
+            }
+            if (v instanceof Literal) {
+                return v.stringValue();
+            }
+            if (v instanceof TripleTerm) {
+                TripleTerm t = (TripleTerm) v;
+                return String.join("|",
+                        canonicalString(t.getSubject()),
+                        t.getPredicate().stringValue(),
+                        canonicalString(t.getObject()));
+            }
+            return v.toString();
+        }
+    }
 
 } // end inner class PositiveParserTest

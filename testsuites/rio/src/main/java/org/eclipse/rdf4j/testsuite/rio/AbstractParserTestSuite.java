@@ -10,8 +10,7 @@
  *******************************************************************************/
 package org.eclipse.rdf4j.testsuite.rio;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -28,6 +27,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import junit.framework.TestSuite;
+
+import static org.eclipse.rdf4j.testsuite.rio.rdfxml.RDFXMLParserTestCase.*;
 
 public abstract class AbstractParserTestSuite {
 
@@ -97,6 +98,10 @@ public abstract class AbstractParserTestSuite {
 			final String subManifestFile = bindingSet.getValue("manifestFile").stringValue();
 
 			String subManifestFilePath = "";
+            if (format == RDFFormat.RDFXML && subManifestFile.contains("rdf11")) {
+                final String relativePath = subManifestFile.substring(RDF_XML_TESTS_W3C_BASE_URL.length());
+                subManifestFilePath = testFileBasePath + relativePath;
+            }
 			if (subManifestFile.startsWith(testBaseURL)) {
 				final String relativePath = subManifestFile.substring(testBaseURL.length());
 				subManifestFilePath = testFileBasePath + relativePath;
