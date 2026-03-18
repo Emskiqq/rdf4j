@@ -51,20 +51,31 @@ public class RdfStarQueryEvaluationStep implements QueryEvaluationStep {
 		final Value objValue = StrictEvaluationStrategy.getVarValue(objVar, bindings);
 		final Value extValue = StrictEvaluationStrategy.getVarValue(extVar, bindings);
 
-		// case1: when we have a binding for extVar we use it in the reified nodes lookup
-		// case2: in which we have unbound extVar
-		// in both cases:
-		// 1. iterate over all statements matching ((* | extValue), rdf:type, rdf:Statement)
-		// 2. construct a look ahead iteration and filter these solutions that do not match the
-		// bindings for the subject, predicate and object vars (if these are bound)
-		// return set of solution where the values of the statements (extVar, rdf:subject/predicate/object,
-		// value)
-		// are bound to the variables of the respective TripleRef variables for subject, predicate, object
-		// NOTE: if the tripleSource is extended to allow for lookup over asserted Triple values in the
-		// underlying sail
-		// the evaluation of the TripleRef should be suitably forwarded down the sail and filter/construct
-		// the correct solution out of the results of that call
-		if (extValue != null && !(extValue instanceof Resource)) {
+		// RDF 1.2 ReifiedTripleRef evaluation (extends TripleRef):
+		// ReifiedTripleRef = TripleRef + reification statement lookup
+		//
+		// case1: when we have a binding for extVar (can be Resource reifier or TripleTerm value)
+		// case2: when extVar is unbound - need to find all matching patterns
+		//
+		// This handles the complete ReifiedTriple pattern which includes:
+		// - Base TripleRef functionality: Direct triple term lookup <<( s p o )>>
+		// - Additional reification lookup: Find reifiers that reify the triple term
+		// and their associated rdf:reifies statements
+		//
+		// Process:
+		// 1. Look up triple terms matching the s/p/o pattern from tripleSource
+		// 2. Filter based on bound variables (subjVar, predVar, objVar, extVar)
+		// 3. For each matching triple term:
+		// - Bind the component variables (s, p, o)
+		// - Bind extVar to either the TripleTerm or associated reifier Resource
+		// 4. Generate bindings for both:
+		// - Direct triple term references
+		// - Reification statements (reifier rdf:reifies tripleTerm)
+		//
+		// The extVar can be bound to:
+		// - TripleTerm values: For direct triple term object/subject usage
+		// - Resource reifiers: For reification statement patterns
+		if (extValue != null && !(extValue instanceof Resource) && !(extValue instanceof TripleTerm)) {
 			return EMPTY_ITERATION;
 		}
 

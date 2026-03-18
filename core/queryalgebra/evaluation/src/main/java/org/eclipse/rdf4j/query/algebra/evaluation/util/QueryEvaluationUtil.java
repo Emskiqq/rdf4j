@@ -17,6 +17,7 @@ import javax.xml.datatype.Duration;
 import javax.xml.datatype.XMLGregorianCalendar;
 
 import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.TripleTerm;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.base.CoreDatatype;
 import org.eclipse.rdf4j.model.datatypes.XMLDatatypeUtil;
@@ -133,6 +134,12 @@ public class QueryEvaluationUtil {
 		if (leftVal != null && leftVal.isLiteral() && rightVal != null && rightVal.isLiteral()) {
 			// Both left and right argument is a Literal
 			return compareLiterals((Literal) leftVal, (Literal) rightVal, operator, strict);
+		} else if (leftVal != null && leftVal.isTripleTerm() && rightVal != null && rightVal.isTripleTerm()) {
+			TripleTerm leftTerm = (TripleTerm) leftVal;
+			TripleTerm rightTerm = (TripleTerm) rightVal;
+			return compare(leftTerm.getSubject(), rightTerm.getSubject(), operator, strict) &&
+					compare(leftTerm.getPredicate(), rightTerm.getPredicate(), operator, strict) &&
+					compare(leftTerm.getObject(), rightTerm.getObject(), operator, strict);
 		} else {
 			// All other value combinations
 			switch (operator) {

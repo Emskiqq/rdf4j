@@ -1511,9 +1511,8 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 
 	protected Var buildReifiedTripleVar(Object reifier, Var subjVar, Var predVar, Var objVar) throws VisitorException {
 		ReifiedTripleRef ref = buildReifiedTripleRef(subjVar, predVar, objVar, reifier);
-		graphPattern = new GraphPattern(graphPattern);
-		graphPattern.addRequiredTE(ref);
 		graphPattern.addRequiredSP(ref.getReifVar().clone(), REIFIES_VAR.clone(), ref.getExprVar().clone());
+		graphPattern.addRequiredTE(ref);
 
 		return ref.getReifVar();
 	}
