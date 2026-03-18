@@ -16,7 +16,7 @@ public class RDFXMLParserTest {
 
     public static Test suite() throws Exception {
         final TestSuite suite = new TestSuite();
-        //suite.addTest(RDFXML11ParserTest.suite());
+        suite.addTest(RDFXML11ParserTest.suite());
         suite.addTest(RDFXML12ParserTest.suite());
         return suite;
     }
