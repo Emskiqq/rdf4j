@@ -164,8 +164,7 @@ class GraphComparisons {
 		// Compatible blank node mapping found. We need to check that statements not involving blank nodes are equal in
 		// both models.
 		Optional<Statement> missingInModel2 = model1.stream()
-				.filter(st -> !(st.getSubject().isBNode() || st.getObject().isBNode()
-						|| st.getContext() instanceof BNode))
+				.filter(st -> !containsBNodeDeep(st))
 				.filter(st -> !model2.contains(st))
 				.findAny();
 
@@ -173,6 +172,31 @@ class GraphComparisons {
 		// ways to establish model equality.
 		return missingInModel2.isEmpty();
 	}
+
+    private static boolean containsBNodeDeep(Statement st) {
+        if (st.getSubject().isBNode() || st.getObject().isBNode()
+                || st.getContext() instanceof BNode) {
+            return true;
+        }
+
+        if (st.getObject().isTripleTerm()) {
+            return tripleContainsBNode((TripleTerm) st.getObject());
+        }
+
+        return false;
+    }
+
+    private static boolean tripleContainsBNode(TripleTerm t) {
+        if (t.getSubject().isBNode() || t.getObject().isBNode()) {
+            return true;
+        }
+
+        if (t.getObject().isTripleTerm()) {
+            return tripleContainsBNode((TripleTerm) t.getObject());
+        }
+
+        return false;
+    }
 
 	private static boolean mappingsIncompatible(Map<BNode, HashCode> mapping1, Map<BNode, HashCode> mapping2) {
 		if (mapping1.size() != mapping2.size()) {

@@ -11,11 +11,9 @@
 package org.eclipse.rdf4j.testsuite.rio;
 
 import java.io.InputStream;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 
-import org.eclipse.rdf4j.model.IRI;
-import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.*;
 import org.eclipse.rdf4j.model.util.Models;
 import org.eclipse.rdf4j.rio.RDFParser;
 import org.eclipse.rdf4j.rio.helpers.ParseErrorCollector;
@@ -116,14 +114,13 @@ public class PositiveParserTest extends TestCase {
 
 			// Check equality of the two models
 			if (!Models.isomorphic(inputCollection, outputCollection)) {
-				logger.error("===models not equal===\n"
-						+ "Expected: " + outputCollection + "\n"
-						+ "Actual  : " + inputCollection + "\n"
-						+ "======================");
-
-				fail("models not equal");
+                    logger.error("===models not equal===\n"
+                            + "Expected: " + outputCollection + "\n"
+                            + "Actual  : " + inputCollection + "\n"
+                            + "======================");
+                    fail("models not equal");
+                }
 			}
 		}
-	}
 
 } // end inner class PositiveParserTest
