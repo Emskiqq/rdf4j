@@ -28,8 +28,6 @@ import org.slf4j.LoggerFactory;
 
 import junit.framework.TestSuite;
 
-import static org.eclipse.rdf4j.testsuite.rio.rdfxml.RDFXMLParserTestCase.*;
-
 public abstract class AbstractParserTestSuite {
 
 	/*-----------*
