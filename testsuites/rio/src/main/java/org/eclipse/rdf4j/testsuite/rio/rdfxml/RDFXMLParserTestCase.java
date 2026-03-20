@@ -56,7 +56,7 @@ public abstract class RDFXMLParserTestCase extends AbstractParserTestSuite {
     @Override
     protected String computeSubManifestFilePath(String subManifestFile) {
         String subManifestFilePath = "";
-        if (format == RDFFormat.RDFXML && subManifestFile.contains("rdf11")) {
+        if (subManifestFile.contains("rdf11")) {
             final String relativePath = subManifestFile.substring(RDF_XML_TESTS_W3C_BASE_URL.length());
             subManifestFilePath = testFileBasePath + relativePath;
         } else if (subManifestFile.startsWith(testBaseURL)) {
