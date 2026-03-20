@@ -10,8 +10,7 @@
  *******************************************************************************/
 package org.eclipse.rdf4j.testsuite.rio;
 
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
@@ -35,15 +34,15 @@ public abstract class AbstractParserTestSuite {
 	 * Constants *
 	 *-----------*/
 
-	private final String testFileBasePath;
+	protected final String testFileBasePath;
 
 	private final String testManifestURL;
 
 	private final String testManifestURIBase;
 
-	private final String testBaseURL;
+	protected final String testBaseURL;
 
-	private final RDFFormat format;
+	protected final RDFFormat format;
 
 	private final String formatString;
 
@@ -86,7 +85,7 @@ public abstract class AbstractParserTestSuite {
 		return suite;
 	}
 
-	private void parseSubManifests(RepositoryConnection con) throws IOException {
+	protected void parseSubManifests(RepositoryConnection con) throws IOException {
 		final String manifestQuery = "PREFIX mf: <http://www.w3.org/2001/sw/DataAccess/tests/test-manifest#> "
 				+ "SELECT DISTINCT ?manifestFile "
 				+ "WHERE { [] mf:include [ rdf:rest*/rdf:first ?manifestFile ] . }   ";
@@ -95,18 +94,24 @@ public abstract class AbstractParserTestSuite {
 
 		for (final BindingSet bindingSet : queryResult) {
 			final String subManifestFile = bindingSet.getValue("manifestFile").stringValue();
+            final String subManifestFilePath = computeSubManifestFilePath(subManifestFile);
+            final InputStream inputStream = this.getClass().getResourceAsStream(subManifestFilePath);
+            con.add(inputStream, subManifestFile, RDFFormat.TURTLE);
+        }
+    }
 
-			String subManifestFilePath = "";
-			if (subManifestFile.startsWith(testBaseURL)) {
-				final String relativePath = subManifestFile.substring(testBaseURL.length());
-				subManifestFilePath = testFileBasePath + relativePath;
-			}
-
-			final InputStream inputStream = this.getClass().getResourceAsStream(subManifestFilePath);
-
-			con.add(inputStream, subManifestFile, RDFFormat.TURTLE);
-		}
-	}
+    /**
+     * Hook method to allow subclasses to customize the path.
+     * By default, only the normal testBaseURL logic is applied.
+     */
+    protected String computeSubManifestFilePath(String subManifestFile) {
+        String subManifestFilePath = "";
+        if (subManifestFile.startsWith(testBaseURL)) {
+            final String relativePath = subManifestFile.substring(testBaseURL.length());
+            subManifestFilePath = testFileBasePath + relativePath;
+        }
+        return subManifestFilePath;
+    }
 
 	private void parsePositiveSyntaxTests(final TestSuite suite, final RepositoryConnection con) {
 		StringBuilder positiveQuery = new StringBuilder();
