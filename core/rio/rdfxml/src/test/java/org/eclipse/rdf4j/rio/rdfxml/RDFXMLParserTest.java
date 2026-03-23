@@ -215,7 +215,7 @@ public class RDFXMLParserTest {
 
 		String[] expectedLiteral = new String[2];
 
-		String s1 = "(http://mycorp.example.com/papers/NobelPaper1, http://test.org/testing/somedata, \"<test:datapart xmlns:test=\"http://test.org/testing/\" xmlns:dc=\"http://purl.org/metadata/dublin_core#\" xmlns:rdf=\"http://www.w3.org/1999/02/22-rdf-syntax-ns#\">Literal</test:datapart>\n"
+		String s1 = "(http://mycorp.example.com/papers/NobelPaper1, http://test.org/testing/somedata, \"<test:datapart xmlns:test=\"http://test.org/testing/\">Literal</test:datapart>\n"
 				+
 				"  <test:datapart>0</test:datapart>\n" +
 				"  <test:datapart>0</test:datapart>\n" +

@@ -753,23 +753,21 @@ class SAXFilter implements ContentHandler {
             }
 
             if (hasExplicitPrefixUsage) {
-                // CASE 3: prefixed usage → inject only missing prefixes
+                // CASE 1: prefixed usage → inject only missing prefixes
                 for (String prefix : usedPrefixes) {
-                    if (!declaredPrefixes.contains(prefix)
-                            && contextNamespaces.containsKey(prefix)) {
-
+                    if (!declaredPrefixes.contains(prefix) && contextNamespaces.containsKey(prefix)) {
                         appendNamespaceDecl(decls, prefix, contextNamespaces.get(prefix));
                     }
                 }
 
             } else if (inferredDefaultNamespace != null && !inferredDefaultNamespace.isEmpty()) {
-                // CASE 1: default namespace (MathML case)
+                // CASE 2: default namespace
                 if (!declaredPrefixes.contains("")) {
                     appendNamespaceDecl(decls, "", inferredDefaultNamespace);
                 }
 
             } else {
-                // CASE 2: no namespace at all (<br/> case)
+                // CASE 3: no namespace at all
                 for (Map.Entry<String, String> e : contextNamespaces.entrySet()) {
                     if (!declaredPrefixes.contains(e.getKey())) {
                         appendNamespaceDecl(decls, e.getKey(), e.getValue());
