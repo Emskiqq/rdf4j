@@ -775,22 +775,27 @@ class SAXFilter implements ContentHandler {
                 }
             }
 
-            injectIntoFirstStartTag(buffer, decls);
+            injectIntoTags(buffer, decls);
         }
 
-        private void injectIntoFirstStartTag(StringBuilder buffer, StringBuilder decls) {
+        private void injectIntoTags(StringBuilder buffer, StringBuilder decls) {
             int i = 0;
+            int opentag = 0;
             while (i < buffer.length()) {
-                if (buffer.charAt(i) == '<') {
-                    if (i + 1 < buffer.length() && buffer.charAt(i + 1) != '/') {
-                        int end = buffer.indexOf(">", i);
-                        if (end > i) {
-                            buffer.insert(end, decls);
+                char ch = buffer.charAt(i);
+                if (ch == '<') {
+                    if ((i + 1) < buffer.length()) {
+                        char nextChar = buffer.charAt(i + 1);
+                        if (nextChar != '/' && opentag == 0) {
+                            opentag++;
+                            int endOfFirstStartTag = buffer.substring(i).indexOf(">");
+                            buffer.insert(endOfFirstStartTag + i, decls.toString());
+                        } else {
+                            opentag--;
                         }
-                        return;
                     }
                 }
-                i++;
+                i += 1;
             }
         }
     }
