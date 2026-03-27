@@ -219,6 +219,10 @@ public class SyntaxTreeBuilderDefaultVisitor implements SyntaxTreeBuilderVisitor
 		return defaultVisit(node, data);
 	}
 
+	public Object visit(ASTLabeledTripleTerm node, Object data) throws VisitorException {
+		return defaultVisit(node, data);
+	}
+
 	public Object visit(ASTConstTripleTerm node, Object data) throws VisitorException {
 		return defaultVisit(node, data);
 	}
@@ -631,4 +635,4 @@ public class SyntaxTreeBuilderDefaultVisitor implements SyntaxTreeBuilderVisitor
 		return defaultVisit(node, data);
 	}
 }
-/* JavaCC - OriginalChecksum=aa4929847e1fdc1fda5ebc0d743972f4 (do not edit this line) */
+/* JavaCC - OriginalChecksum=a4ab9b7123c8eec92073d189c9c45351 (do not edit this line) */

@@ -15,6 +15,7 @@ import java.util.Map;
 import org.eclipse.rdf4j.common.annotation.InternalUseOnly;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.query.algebra.Add;
+import org.eclipse.rdf4j.query.algebra.AnnotationTripleRef;
 import org.eclipse.rdf4j.query.algebra.Clear;
 import org.eclipse.rdf4j.query.algebra.Copy;
 import org.eclipse.rdf4j.query.algebra.Create;
@@ -54,6 +55,7 @@ import org.eclipse.rdf4j.query.parser.sparql.ast.ASTTripleTerm;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTUnparsedQuadDataBlock;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTUpdate;
 import org.eclipse.rdf4j.query.parser.sparql.ast.ASTWhereClause;
+import org.eclipse.rdf4j.query.parser.sparql.ast.SimpleNode;
 import org.eclipse.rdf4j.query.parser.sparql.ast.VisitorException;
 
 /**
@@ -384,7 +386,7 @@ public class UpdateExprBuilder extends TupleExprBuilder {
 		if (where == null) {
 			return super.buildReifiedTripleVar(reifier, subjVar, predVar, objVar);
 		}
-		ReifiedTripleRef rtr = buildReifiedTripleRef(subjVar, predVar, objVar, reifier);
+		AnnotationTripleRef rtr = buildReifiedTripleRef(subjVar, predVar, objVar, reifier);
 		Extension ext = new Extension(where);
 		ext.addElement(new ExtensionElem(castToValueExpr(rtr), rtr.getExprVar().getName()));
 		graphPattern.addRequiredSP(rtr.getReifVar().clone(), REIFIES_VAR.clone(), rtr.getExprVar().clone());
@@ -411,9 +413,21 @@ public class UpdateExprBuilder extends TupleExprBuilder {
 			return super.visit(node, data);
 		}
 		ReifiedTripleRef ret = new ReifiedTripleRef();
-		ret.setSubjectVar(mapValueExprToVar(node.getSubj().jjtAccept(this, ret)));
+		SimpleNode subjNode = node.getSubj();
+		if (subjNode instanceof ASTReifiedTriple) {
+			ReifiedTripleRef nestedRef = (ReifiedTripleRef) subjNode.jjtAccept(this, data);
+			ret.setSubjectVar(mapValueExprToVar(subjNode.jjtAccept(this, nestedRef)));
+		} else {
+			ret.setSubjectVar(mapValueExprToVar(subjNode.jjtAccept(this, data)));
+		}
 		ret.setPredicateVar(mapValueExprToVar(node.getPred().jjtAccept(this, ret)));
-		ret.setObjectVar(mapValueExprToVar(node.getObj().jjtAccept(this, ret)));
+		SimpleNode objNode = node.getObj();
+		if (objNode instanceof ASTReifiedTriple) {
+			ReifiedTripleRef nestedRef = (ReifiedTripleRef) objNode.jjtAccept(this, data);
+			ret.setObjectVar(nestedRef.getReifVar().clone());
+		} else {
+			ret.setObjectVar(mapValueExprToVar(objNode.jjtAccept(this, ret)));
+		}
 		ret.setExprVar(createAnonVar());
 		ret.setReifVar(node.getReifier() != null ? mapValueExprToVar(node.getReifier().jjtAccept(this, ret))
 				: createAnonVar());

@@ -779,6 +779,11 @@ public abstract class AbstractASTVisitor implements SyntaxTreeBuilderVisitor {
 	}
 
 	@Override
+	public Object visit(ASTLabeledTripleTerm node, Object data) throws VisitorException {
+		return node.childrenAccept(this, data);
+	}
+
+	@Override
 	public Object visit(ASTConstTripleTerm node, Object data) throws VisitorException {
 		return node.childrenAccept(this, data);
 	}

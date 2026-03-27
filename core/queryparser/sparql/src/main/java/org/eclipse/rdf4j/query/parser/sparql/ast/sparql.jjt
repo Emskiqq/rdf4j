@@ -1146,7 +1146,7 @@ void ReifiedTriple() :
 {}
 {
     <TRIPLE_OPEN>
-        ( LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) TripleTerm() | GraphTerm() | Var() )
+        ( GraphTerm() | Var() )
         (IRIref() | Var())
         ( LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) TripleTerm() | GraphTerm() | Var() )
         [
@@ -1168,7 +1168,7 @@ void TripleTerm() :
     <TRIPLE_CLOSE>
 }
 
-void LabeledTripleTerm() #TripleTerm :
+void LabeledTripleTerm() :
 {}
 {
     <TRIPLE_OPEN>
