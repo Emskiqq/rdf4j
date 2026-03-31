@@ -143,7 +143,6 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 	// - add a note to the grammar notes (19.8)."
 	private boolean inAggregate;
 	protected final Map<String, Var> reifiedTripleExprVars = new HashMap<>();
-	private final Map<String, Var> reifiedTripleReifVars = new HashMap<>();
 
 	protected String reifiedTripleKey(Var s, Var p, Var o) {
 		return s.getName() + "|" + p.getName() + "|" + o.getName();
@@ -2416,7 +2415,7 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 
 	@Override
 	public Var visit(ASTVar node, Object data) throws VisitorException {
-		return new Var(node.getName(), node.isAnonymous());
+		return new Var(node.getName(), node.isAnonymous(), node.isBNode());
 	}
 
 	@Override
@@ -2776,17 +2775,12 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 		if (node.getReifier() != null) {
 			reifVar = mapValueExprToVar(node.getReifier().jjtAccept(this, ref));
 		} else {
-			String key = reifiedTripleKey(ref.getSubjectVar(), ref.getPredicateVar(), ref.getObjectVar());
 			reifVar = createAnonVar();
-			Var exprVar = createAnonVar();
-			reifiedTripleExprVars.putIfAbsent(key, exprVar);
 		}
 
 		// Reuse exprVar for same anonymous s/p/o pattern
 		String key = reifiedTripleKey(ref.getSubjectVar(), ref.getPredicateVar(), ref.getObjectVar());
-		Var exprVar = node.getReifier() != null
-				? createAnonVar() // explicit reifier: always fresh exprVar
-				: reifiedTripleExprVars.getOrDefault(key, createAnonVar());
+		Var exprVar = reifiedTripleExprVars.computeIfAbsent(key, k -> createAnonVar());
 
 		ref.setExprVar(exprVar.clone());
 		ref.setReifVar(reifVar.clone());

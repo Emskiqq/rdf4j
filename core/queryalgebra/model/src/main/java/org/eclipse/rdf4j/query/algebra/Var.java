@@ -30,14 +30,20 @@ public class Var extends AbstractQueryModelNode implements ValueExpr {
 
 	private boolean constant = false;
 
+	private boolean isBNode = false;
+
 	private int cachedHashCode = 0;
 
 	public Var(String name, Value value, boolean anonymous, boolean constant) {
+		this(name, value, anonymous, constant, false);
+	}
+
+	public Var(String name, Value value, boolean anonymous, boolean constant, boolean isBNode) {
 		this.name = name;
 		this.value = value;
 		this.anonymous = anonymous;
 		this.constant = constant;
-
+		this.isBNode = isBNode;
 	}
 
 	public Var(String name) {
@@ -54,6 +60,10 @@ public class Var extends AbstractQueryModelNode implements ValueExpr {
 
 	public Var(String name, Value value, boolean anonymous) {
 		this(name, value, anonymous, false);
+	}
+
+	public Var(String name, boolean anonymous, boolean isBNode) {
+		this(name, null, anonymous, false, isBNode);
 	}
 
 	public boolean isAnonymous() {
@@ -146,7 +156,7 @@ public class Var extends AbstractQueryModelNode implements ValueExpr {
 
 	@Override
 	public Var clone() {
-		return new Var(name, value, anonymous, constant);
+		return new Var(name, value, anonymous, constant, isBNode);
 	}
 
 	/**
@@ -156,4 +166,11 @@ public class Var extends AbstractQueryModelNode implements ValueExpr {
 		return constant;
 	}
 
+	public void setBNode(boolean BNode) {
+		isBNode = BNode;
+	}
+
+	public boolean isBNode() {
+		return isBNode;
+	}
 }

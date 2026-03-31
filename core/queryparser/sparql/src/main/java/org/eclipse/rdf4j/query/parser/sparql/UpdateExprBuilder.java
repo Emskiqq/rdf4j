@@ -10,12 +10,14 @@
  *******************************************************************************/
 package org.eclipse.rdf4j.query.parser.sparql;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.eclipse.rdf4j.common.annotation.InternalUseOnly;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.query.algebra.Add;
 import org.eclipse.rdf4j.query.algebra.AnnotationTripleRef;
+import org.eclipse.rdf4j.query.algebra.BNodeGenerator;
 import org.eclipse.rdf4j.query.algebra.Clear;
 import org.eclipse.rdf4j.query.algebra.Copy;
 import org.eclipse.rdf4j.query.algebra.Create;
@@ -69,6 +71,7 @@ import org.eclipse.rdf4j.query.parser.sparql.ast.VisitorException;
 public class UpdateExprBuilder extends TupleExprBuilder {
 
 	TupleExpr where;
+	private final Map<String, BNodeGenerator> bNodeGenerators = new HashMap<>();
 
 	/**
 	 * @param valueFactory
@@ -400,7 +403,14 @@ public class UpdateExprBuilder extends TupleExprBuilder {
 			return super.visit(node, data);
 		}
 		TripleRef ret = constructTripleRefFromAST(node);
+
 		Extension ext = new Extension(where);
+
+		// Register subject/object blank node vars so they get a BNodeGenerator binding
+		// on first occurrence; subsequent references reuse the same generated bnode value.
+		registerBNodeVarIfNew(ret.getSubjectVar(), ext);
+		registerBNodeVarIfNew(ret.getObjectVar(), ext);
+
 		ext.addElement(new ExtensionElem(castToValueExpr(ret), ret.getExprVar().getName()));
 		where = ext;
 
@@ -413,30 +423,75 @@ public class UpdateExprBuilder extends TupleExprBuilder {
 			return super.visit(node, data);
 		}
 		ReifiedTripleRef ret = new ReifiedTripleRef();
+
 		SimpleNode subjNode = node.getSubj();
+		// Recursively handle nested reified triples in subject position
 		if (subjNode instanceof ASTReifiedTriple) {
-			ReifiedTripleRef nestedRef = (ReifiedTripleRef) subjNode.jjtAccept(this, data);
+			ReifiedTripleRef nestedRef = new ReifiedTripleRef();
 			ret.setSubjectVar(mapValueExprToVar(subjNode.jjtAccept(this, nestedRef)));
 		} else {
 			ret.setSubjectVar(mapValueExprToVar(subjNode.jjtAccept(this, data)));
 		}
 		ret.setPredicateVar(mapValueExprToVar(node.getPred().jjtAccept(this, ret)));
+
 		SimpleNode objNode = node.getObj();
+		// Recursively handle nested reified triples in object position
 		if (objNode instanceof ASTReifiedTriple) {
-			ReifiedTripleRef nestedRef = (ReifiedTripleRef) objNode.jjtAccept(this, data);
-			ret.setObjectVar(nestedRef.getReifVar().clone());
+			ReifiedTripleRef nestedRef = new ReifiedTripleRef();
+			ret.setObjectVar(mapValueExprToVar(objNode.jjtAccept(this, nestedRef)));
 		} else {
 			ret.setObjectVar(mapValueExprToVar(objNode.jjtAccept(this, ret)));
 		}
 		ret.setExprVar(createAnonVar());
-		ret.setReifVar(node.getReifier() != null ? mapValueExprToVar(node.getReifier().jjtAccept(this, ret))
-				: createAnonVar());
+
+		// Use explicit reifier if provided; otherwise generate an anonymous blank node reifier
+		Var reifier;
+		if (node.getReifier() != null) {
+			reifier = mapValueExprToVar(node.getReifier().jjtAccept(this, ret));
+		} else {
+			reifier = createAnonVar();
+			reifier.setBNode(true);
+		}
+		ret.setReifVar(reifier);
+
 		Extension ext = new Extension(where);
+		// Register subject/object blank node vars — same semantics as in visit(ASTTripleTerm)
+		registerBNodeVarIfNew(ret.getSubjectVar(), ext);
+		registerBNodeVarIfNew(ret.getObjectVar(), ext);
+		registerBNodeVarIfNew(ret.getReifVar(), ext);
+
 		ext.addElement(new ExtensionElem(castToValueExpr(ret), ret.getExprVar().getName()));
 
+		// Add the reification statement: reifier rdf:reifies <triple-expression>
 		graphPattern.addRequiredSP(ret.getReifVar().clone(), REIFIES_VAR.clone(), ret.getExprVar().clone());
 		where = ext;
 
 		return ret;
+	}
+
+	/**
+	 * Registers a blank node variable into the given {@link Extension} if it hasn't been registered yet.
+	 * <p>
+	 * When a blank node variable is first encountered in an update template (INSERT/DELETE), it must be bound to a
+	 * {@link BNodeGenerator} expression via an {@link ExtensionElem}. This ensures the blank node is assigned a fresh,
+	 * unique RDF blank node value at evaluation time, and that subsequent references to the same blank node variable
+	 * resolve to the same generated value within the operation.
+	 * <p>
+	 * The {@code bNodeGenerators} map acts as a registry: if the variable name is already present, the generator has
+	 * already been added to a prior extension in the chain and no duplicate is needed.
+	 *
+	 * @param var the candidate variable to check
+	 * @param ext the extension to add the {@link BNodeGenerator} binding to, if first occurrence
+	 */
+	private void registerBNodeVarIfNew(Var var, Extension ext) {
+		if (var.isAnonymous() && !var.hasValue() && var.isBNode()) {
+			// computeIfAbsent only creates a new BNodeGenerator on first encounter;
+			// if already present the existing generator is returned but not re-added to the extension.
+			if (!bNodeGenerators.containsKey(var.getName())) {
+				ValueExpr valueExpr = bNodeGenerators.computeIfAbsent(var.getName(),
+						ignored -> new BNodeGenerator());
+				ext.addElement(new ExtensionElem(valueExpr, var.getName()));
+			}
+		}
 	}
 }
