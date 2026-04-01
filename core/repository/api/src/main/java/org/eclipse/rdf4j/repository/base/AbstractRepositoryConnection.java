@@ -27,6 +27,7 @@ import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.BooleanQuery;
 import org.eclipse.rdf4j.query.GraphQuery;
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -186,6 +187,12 @@ public abstract class AbstractRepositoryConnection implements RepositoryConnecti
 	@Override
 	public void export(RDFHandler handler, Resource... contexts) throws RepositoryException, RDFHandlerException {
 		exportStatements(null, null, null, false, handler, contexts);
+	}
+
+	@Override
+	public void export(RDFHandler handler, VersionLabel preferredRDFVersion, Resource... contexts)
+			throws RepositoryException, RDFHandlerException {
+		exportStatements(null, null, null, false, handler, preferredRDFVersion, contexts);
 	}
 
 	/**

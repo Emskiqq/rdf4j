@@ -25,6 +25,7 @@ import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.BooleanQuery;
 import org.eclipse.rdf4j.query.GraphQuery;
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -201,6 +202,28 @@ public interface RepositoryConnection extends AutoCloseable {
 			throws RepositoryException, MalformedQueryException;
 
 	/**
+	 * Prepares a query for evaluation on this repository (optional operation).
+	 * <p>
+	 * If you already know the type of query, using the more specific {@link #prepareTupleQuery},
+	 * {@link #prepareGraphQuery} or {@link #prepareBooleanQuery} is likely to be more efficient.
+	 *
+	 * @param ql        The {@link QueryLanguage query language} in which the query is formulated.
+	 * @param qlVersion The RDF version of the query language.
+	 * @param query     The query string.
+	 * @param baseURI   The base URI to resolve any relative URIs that are in the query against, can be <var>null</var>
+	 *                  if the query does not contain any relative URIs.
+	 * @return A query ready to be evaluated on this repository.
+	 * @throws MalformedQueryException           If the supplied query is malformed.
+	 * @throws UnsupportedQueryLanguageException If the supplied query language is not supported.
+	 * @throws UnsupportedOperationException     If the <var>prepareQuery</var> method is not supported by this
+	 *                                           repository.
+	 */
+	default Query prepareQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws RepositoryException, MalformedQueryException {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
 	 * Prepares a SPARQL query that produces sets of value tuples, that is a SPARQL SELECT query. In case the query
 	 * contains relative URIs that need to be resolved against an external base URI, one should use
 	 * {@link #prepareTupleQuery(QueryLanguage, String, String)} instead.
@@ -246,6 +269,26 @@ public interface RepositoryConnection extends AutoCloseable {
 			throws RepositoryException, MalformedQueryException;
 
 	/**
+	 * Prepares a query that produces sets of value tuples.
+	 *
+	 * @param ql        The {@link QueryLanguage query language} in which the query is formulated.
+	 * @param qlVersion The RDF version of the query language.
+	 * @param query     The query string.
+	 * @param baseURI   The base URI to resolve any relative URIs that are in the query against, can be <var>null</var>
+	 *                  if the query does not contain any relative URIs.
+	 * @return a {@link TupleQuery} ready to be evaluated on this {@link RepositoryConnection}.
+	 * @throws IllegalArgumentException          If the supplied query is not a tuple query.
+	 * @throws MalformedQueryException           If the supplied query is malformed.
+	 * @throws UnsupportedQueryLanguageException If the supplied query language is not supported.
+	 * @throws UnsupportedOperationException     If the <var>prepareTupleQuery</var> method is not supported by this
+	 *                                           repository.
+	 */
+	default TupleQuery prepareTupleQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws RepositoryException, MalformedQueryException {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
 	 * Prepares SPARQL queries that produce RDF graphs, that is, SPARQL CONSTRUCT or DESCRIBE queries. In case the query
 	 * contains relative URIs that need to be resolved against an external base URI, one should use
 	 * {@link #prepareGraphQuery(QueryLanguage, String, String)} instead.
@@ -273,6 +316,26 @@ public interface RepositoryConnection extends AutoCloseable {
 	 */
 	GraphQuery prepareGraphQuery(QueryLanguage ql, String query)
 			throws RepositoryException, MalformedQueryException;
+
+	/**
+	 * Prepares queries that produce RDF graphs.
+	 *
+	 * @param ql        The {@link QueryLanguage query language} in which the query is formulated.
+	 * @param qlVersion The RDF version of the query language.
+	 * @param query     The query string.
+	 * @param baseURI   The base URI to resolve any relative URIs that are in the query against, can be <var>null</var>
+	 *                  if the query does not contain any relative URIs.
+	 * @return a {@link GraphQuery} ready to be evaluated on this {@link RepositoryConnection}.
+	 * @throws IllegalArgumentException          If the supplied query is not a graph query.
+	 * @throws MalformedQueryException           If the supplied query is malformed.
+	 * @throws UnsupportedQueryLanguageException If the supplied query language is not supported.
+	 * @throws UnsupportedOperationException     If the <var>prepareGraphQuery</var> method is not supported by this
+	 *                                           repository.
+	 */
+	default GraphQuery prepareGraphQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws RepositoryException, MalformedQueryException {
+		throw new UnsupportedOperationException();
+	}
 
 	/**
 	 * Prepares queries that produce RDF graphs.
@@ -335,6 +398,26 @@ public interface RepositoryConnection extends AutoCloseable {
 			throws RepositoryException, MalformedQueryException;
 
 	/**
+	 * Prepares queries that return <var>true</var> or <var>false</var>.
+	 *
+	 * @param ql        The {@link QueryLanguage query language} in which the query is formulated.
+	 * @param qlVersion The RDF version of the query language.
+	 * @param query     The query string.
+	 * @param baseURI   The base URI to resolve any relative URIs that are in the query against, can be <var>null</var>
+	 *                  if the query does not contain any relative URIs.
+	 * @return a {@link BooleanQuery} ready to be evaluated on this {@link RepositoryConnection}.
+	 * @throws IllegalArgumentException          If the supplied query is not a boolean query.
+	 * @throws MalformedQueryException           If the supplied query is malformed.
+	 * @throws UnsupportedQueryLanguageException If the supplied query language is not supported.
+	 * @throws UnsupportedOperationException     If the <var>prepareBooleanQuery</var> method is not supported by this
+	 *                                           repository.
+	 */
+	default BooleanQuery prepareBooleanQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws RepositoryException, MalformedQueryException {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
 	 * Prepares a SPARQL Update operation. In case the update string contains relative URIs that need to be resolved
 	 * against an external base URI, one should use {@link #prepareUpdate(QueryLanguage, String, String)} instead.
 	 *
@@ -370,6 +453,23 @@ public interface RepositoryConnection extends AutoCloseable {
 	 */
 	Update prepareUpdate(QueryLanguage ql, String update, String baseURI)
 			throws RepositoryException, MalformedQueryException;
+
+	/**
+	 * Prepares an Update operation.
+	 *
+	 * @param ql        The {@link QueryLanguage query language} in which the update operation is formulated.
+	 * @param qlVersion The RDF version of the query language.
+	 * @param update    The update operation string.
+	 * @param baseURI   The base URI to resolve any relative URIs that are in the update against, can be <var>null</var>
+	 *                  if the update does not contain any relative URIs.
+	 * @return a {@link Update} ready to be executed on this {@link RepositoryConnection}.
+	 * @throws MalformedQueryException       If the supplied update operation string is malformed.
+	 * @throws UnsupportedOperationException If the <var>prepareUpdate</var> method is not supported by this repository.
+	 */
+	default Update prepareUpdate(QueryLanguage ql, VersionLabel qlVersion, String update, String baseURI)
+			throws RepositoryException, MalformedQueryException {
+		throw new UnsupportedOperationException();
+	}
 
 	/**
 	 * Gets all resources that are used as context identifiers. Care should be taken that the returned
@@ -415,6 +515,51 @@ public interface RepositoryConnection extends AutoCloseable {
 	 */
 	RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj, boolean includeInferred,
 			Resource... contexts) throws RepositoryException;
+
+	/**
+	 * Gets all statements with a specific subject, predicate and/or object from the repository. The result is
+	 * optionally restricted to the specified set of named contexts. If the repository supports inferencing, inferred
+	 * statements will be included in the result.
+	 *
+	 * @param subj                       A Resource specifying the subject, or <var>null</var> for a wildcard.
+	 * @param pred                       A URI specifying the predicate, or <var>null</var> for a wildcard.
+	 * @param obj                        A Value specifying the object, or <var>null</var> for a wildcard.
+	 * @param contexts                   The context(s) to get the data from. Note that this parameter is a vararg and
+	 *                                   as such is optional. If no contexts are supplied the method operates on the
+	 *                                   entire repository.
+	 * @param preferredRDFResultsVersion The preferred RDF version ot the statements.
+	 * @return The statements matching the specified pattern. The result object is a {@link RepositoryResult} object, a
+	 *         lazy Iterator-like object containing {@link Statement}s and optionally throwing a
+	 *         {@link RepositoryException} when an error when a problem occurs during retrieval.
+	 */
+	default RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj,
+			VersionLabel preferredRDFResultsVersion, Resource... contexts) throws RepositoryException {
+		return getStatements(subj, pred, obj, true, preferredRDFResultsVersion, contexts);
+	}
+
+	/**
+	 * Gets all statements with a specific subject, predicate and/or object from the repository. The result is
+	 * optionally restricted to the specified set of named contexts.
+	 *
+	 * @param subj                       A Resource specifying the subject, or <var>null</var> for a wildcard.
+	 * @param pred                       An IRI specifying the predicate, or <var>null</var> for a wildcard.
+	 * @param obj                        A Value specifying the object, or <var>null</var> for a wildcard.
+	 * @param contexts                   The context(s) to get the data from. Note that this parameter is a vararg and
+	 *                                   as such is optional. If no contexts are supplied the method operates on the
+	 *                                   entire repository.
+	 * @param includeInferred            if false, no inferred statements are returned; if true, inferred statements are
+	 *                                   returned if available. The default is true.
+	 * @param preferredRDFResultsVersion The preferred RDF version ot the statements.
+	 * @return The statements matching the specified pattern. The result object is a {@link RepositoryResult} object, a
+	 *         lazy Iterator-like object containing {@link Statement}s and optionally throwing a
+	 *         {@link RepositoryException} when an error when a problem occurs during retrieval.
+	 * @throws UnsupportedOperationException If the <var>getStatements</var> method is not supported by this repository.
+	 */
+	default RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj, boolean includeInferred,
+			VersionLabel preferredRDFResultsVersion, Resource... contexts)
+			throws RepositoryException {
+		throw new UnsupportedOperationException();
+	}
 
 	/**
 	 * Checks whether the repository contains statements with a specific subject, predicate and/or object, optionally in
@@ -463,6 +608,31 @@ public interface RepositoryConnection extends AutoCloseable {
 			Resource... contexts) throws RepositoryException, RDFHandlerException;
 
 	/**
+	 * Exports all statements with a specific subject, predicate and/or object from the repository, optionally from the
+	 * specified contexts. This method supplies the RDFHandler with all namespace declarations available in the
+	 * repository. Allows for specifying the preferred RDF version of the exported statements.
+	 *
+	 * @param subj                       The subject, or null if the subject doesn't matter.
+	 * @param pred                       The predicate, or null if the predicate doesn't matter.
+	 * @param obj                        The object, or null if the object doesn't matter.
+	 * @param contexts                   The context(s) to get the data from. Note that this parameter is a vararg and
+	 *                                   as such is optional. If no contexts are supplied the method operates on the
+	 *                                   entire repository.
+	 * @param handler                    The handler that will handle the RDF data.
+	 * @param preferredRDFResultsVersion The preferred RDF version ot the statements.
+	 * @param includeInferred            if false, no inferred statements are returned; if true, inferred statements are
+	 *                                   returned if available
+	 * @throws RDFHandlerException           If the handler encounters an unrecoverable error.
+	 * @throws UnsupportedOperationException If the <var>exportStatements</var> method is not supported by this
+	 *                                       repository.
+	 */
+	default void exportStatements(Resource subj, IRI pred, Value obj, boolean includeInferred, RDFHandler handler,
+			VersionLabel preferredRDFResultsVersion, Resource... contexts)
+			throws RepositoryException, RDFHandlerException {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
 	 * Exports all explicit statements in the specified contexts to the supplied RDFHandler. This method supplies the
 	 * RDFHandler with all namespace declarations available in the repository.
 	 *
@@ -472,6 +642,23 @@ public interface RepositoryConnection extends AutoCloseable {
 	 * @throws RDFHandlerException If the handler encounters an unrecoverable error.
 	 */
 	void export(RDFHandler handler, Resource... contexts) throws RepositoryException, RDFHandlerException;
+
+	/**
+	 * Exports all explicit statements in the specified contexts to the supplied RDFHandler. This method supplies the
+	 * RDFHandler with all namespace declarations available in the repository.
+	 *
+	 * @param contexts                   The context(s) to get the data from. Note that this parameter is a vararg and
+	 *                                   as such is optional. If no contexts are supplied the method operates on the
+	 *                                   entire repository.
+	 * @param preferredRDFResultsVersion The preferred RDF version of the handled data.
+	 * @param handler                    The handler that will handle the RDF data.
+	 * @throws RDFHandlerException           If the handler encounters an unrecoverable error.
+	 * @throws UnsupportedOperationException If the <var>export</var> method is not supported by this repository.
+	 */
+	default void export(RDFHandler handler, VersionLabel preferredRDFResultsVersion, Resource... contexts)
+			throws RepositoryException, RDFHandlerException {
+		throw new UnsupportedOperationException();
+	}
 
 	/**
 	 * Returns the number of (explicit) statements that are in the specified contexts in this repository.

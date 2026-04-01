@@ -41,21 +41,10 @@ import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.impl.DynamicModelFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.Literals;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.model.vocabulary.RDF4J;
 import org.eclipse.rdf4j.model.vocabulary.SESAME;
-import org.eclipse.rdf4j.query.BindingSet;
-import org.eclipse.rdf4j.query.BooleanQuery;
-import org.eclipse.rdf4j.query.GraphQuery;
-import org.eclipse.rdf4j.query.GraphQueryResult;
-import org.eclipse.rdf4j.query.MalformedQueryException;
-import org.eclipse.rdf4j.query.Query;
-import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.TupleQuery;
-import org.eclipse.rdf4j.query.TupleQueryResult;
-import org.eclipse.rdf4j.query.UnsupportedQueryLanguageException;
-import org.eclipse.rdf4j.query.Update;
-import org.eclipse.rdf4j.query.UpdateExecutionException;
+import org.eclipse.rdf4j.query.*;
 import org.eclipse.rdf4j.query.impl.SimpleDataset;
 import org.eclipse.rdf4j.query.parser.QueryParserUtil;
 import org.eclipse.rdf4j.query.parser.sparql.SPARQLQueries;
@@ -81,7 +70,7 @@ import org.eclipse.rdf4j.rio.helpers.StatementCollector;
  *
  * @author James Leigh
  */
-public class SPARQLConnection extends AbstractRepositoryConnection implements HttpClientDependent {
+public class SPARQLConnection extends AbstractRepositoryConnection implements HttpClientDependent, RDFVersionAware {
 
 	private static final String COUNT_EVERYTHING = "SELECT (COUNT(*) AS ?count) WHERE { ?s ?p ?o }";
 
@@ -223,6 +212,19 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 	}
 
 	@Override
+	public void exportStatements(Resource subj, IRI pred, Value obj, boolean includeInferred, RDFHandler handler,
+			VersionLabel preferredRDFVersion, Resource... contexts) throws RepositoryException, RDFHandlerException {
+		try {
+			GraphQuery query = prepareGraphQuery(SPARQL, EVERYTHING, "");
+			query.setPreferredRDFResultsVersion(preferredRDFVersion);
+			setBindings(query, subj, pred, obj, contexts);
+			query.evaluate(handler);
+		} catch (MalformedQueryException | QueryEvaluationException e) {
+			throw new RepositoryException(e);
+		}
+	}
+
+	@Override
 	public RepositoryResult<Resource> getContextIDs() throws RepositoryException {
 		TupleQueryResult iter = null;
 		RepositoryResult<Resource> result = null;
@@ -347,7 +349,7 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 			Resource... contexts) throws RepositoryException {
 		try {
 			if (isQuadMode()) {
-				return getStatementsQuadMode(subj, pred, obj, includeInferred, contexts);
+				return getStatementsQuadMode(subj, pred, obj, includeInferred, null, contexts);
 			} else if (subj != null && pred != null && obj != null) {
 				return getStatementsSingleTriple(subj, pred, obj, includeInferred, contexts);
 			} else {
@@ -358,17 +360,34 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 		}
 	}
 
+	@Override
+	public RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj, boolean includeInferred,
+			VersionLabel preferredRDFVersion, Resource... contexts) throws RepositoryException {
+		try {
+			if (isQuadMode()) {
+				return getStatementsQuadMode(subj, pred, obj, includeInferred, preferredRDFVersion, contexts);
+			} else if (subj != null && pred != null && obj != null) {
+				return getStatementsSingleTriple(subj, pred, obj, includeInferred, contexts);
+			} else {
+				return getStatementGeneral(subj, pred, obj, includeInferred, preferredRDFVersion, contexts);
+			}
+		} catch (MalformedQueryException | QueryEvaluationException e) {
+			throw new RepositoryException(e);
+		}
+	}
+
 	private RepositoryResult<Statement> getStatementsQuadMode(Resource subj, IRI pred, Value obj,
-			boolean includeInferred, Resource... contexts)
+			boolean includeInferred, VersionLabel preferredRDFVersion, Resource... contexts)
 			throws MalformedQueryException, RepositoryException, QueryEvaluationException {
 		TupleQueryResult qRes = null;
 		RepositoryResult<Statement> result = null;
 
 		boolean allGood = false;
 		try {
-			TupleQuery tupleQuery = prepareTupleQuery(SPARQL, EVERYTHING_WITH_GRAPH);
+			TupleQuery tupleQuery = prepareTupleQuery(SPARQL, EVERYTHING_WITH_GRAPH, null);
 			setBindings(tupleQuery, subj, pred, obj, contexts);
 			tupleQuery.setIncludeInferred(includeInferred);
+			tupleQuery.setPreferredRDFResultsVersion(preferredRDFVersion);
 			qRes = tupleQuery.evaluate();
 
 			result = new RepositoryResult<>(new ExceptionConvertingIteration<>(
@@ -431,6 +450,37 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 		}
 	}
 
+	private RepositoryResult<Statement> getStatementGeneral(Resource subj, IRI pred, Value obj, boolean includeInferred,
+			VersionLabel preferredRDFVersion, Resource... contexts)
+			throws RepositoryException, MalformedQueryException, QueryEvaluationException {
+		GraphQueryResult gRes = null;
+		RepositoryResult<Statement> result = null;
+
+		boolean allGood = false;
+		try {
+			GraphQuery query = prepareGraphQuery(SPARQL, EVERYTHING, "");
+			query.setIncludeInferred(includeInferred);
+			query.setPreferredRDFResultsVersion(preferredRDFVersion);
+			setBindings(query, subj, pred, obj, contexts);
+			gRes = query.evaluate();
+			result = new RepositoryResult<>(
+					new ExceptionConvertingIteration<>(gRes) {
+						@Override
+						protected RepositoryException convert(RuntimeException e) {
+							return new RepositoryException(e);
+						}
+					});
+			allGood = true;
+			return result;
+		} finally {
+			if (!allGood) {
+				if (gRes != null) {
+					gRes.close();
+				}
+			}
+		}
+	}
+
 	@Override
 	public boolean hasStatement(Resource subj, IRI pred, Value obj, boolean includeInferred, Resource... contexts)
 			throws RepositoryException {
@@ -465,10 +515,35 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 	}
 
 	@Override
+	public Query prepareQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String base)
+			throws RepositoryException, MalformedQueryException {
+		if (SPARQL.equals(ql)) {
+			String strippedQuery = QueryParserUtil.removeSPARQLQueryProlog(query).toUpperCase();
+			if (strippedQuery.startsWith("SELECT")) {
+				return prepareTupleQuery(ql, qlVersion, query, base);
+			} else if (strippedQuery.startsWith("ASK")) {
+				return prepareBooleanQuery(ql, qlVersion, query, base);
+			} else {
+				return prepareGraphQuery(ql, qlVersion, query, base);
+			}
+		}
+		throw new UnsupportedOperationException("Unsupported query language " + ql);
+	}
+
+	@Override
 	public BooleanQuery prepareBooleanQuery(QueryLanguage ql, String query, String base)
 			throws RepositoryException, MalformedQueryException {
 		if (SPARQL.equals(ql)) {
 			return new SPARQLBooleanQuery(client, base, query);
+		}
+		throw new UnsupportedQueryLanguageException("Unsupported query language " + ql);
+	}
+
+	@Override
+	public BooleanQuery prepareBooleanQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String base)
+			throws RepositoryException, MalformedQueryException {
+		if (SPARQL.equals(ql)) {
+			return new SPARQLBooleanQuery(client, base, query, qlVersion);
 		}
 		throw new UnsupportedQueryLanguageException("Unsupported query language " + ql);
 	}
@@ -483,10 +558,28 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 	}
 
 	@Override
+	public GraphQuery prepareGraphQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String base)
+			throws RepositoryException, MalformedQueryException {
+		if (SPARQL.equals(ql)) {
+			return new SPARQLGraphQuery(client, base, query, qlVersion);
+		}
+		throw new UnsupportedQueryLanguageException("Unsupported query language " + ql);
+	}
+
+	@Override
 	public TupleQuery prepareTupleQuery(QueryLanguage ql, String query, String base)
 			throws RepositoryException, MalformedQueryException {
 		if (SPARQL.equals(ql)) {
 			return new SPARQLTupleQuery(client, base, query);
+		}
+		throw new UnsupportedQueryLanguageException("Unsupported query language " + ql);
+	}
+
+	@Override
+	public TupleQuery prepareTupleQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String base)
+			throws RepositoryException, MalformedQueryException {
+		if (SPARQL.equals(ql)) {
+			return new SPARQLTupleQuery(client, base, query, qlVersion);
 		}
 		throw new UnsupportedQueryLanguageException("Unsupported query language " + ql);
 	}
@@ -777,6 +870,15 @@ public class SPARQLConnection extends AbstractRepositoryConnection implements Ht
 			throws RepositoryException, MalformedQueryException {
 		if (SPARQL.equals(ql)) {
 			return new SPARQLUpdate(client, baseURI, update);
+		}
+		throw new UnsupportedQueryLanguageException("Unsupported query language " + ql);
+	}
+
+	@Override
+	public Update prepareUpdate(QueryLanguage ql, VersionLabel qlVersion, String update, String baseURI)
+			throws RepositoryException, MalformedQueryException {
+		if (SPARQL.equals(ql)) {
+			return new SPARQLUpdate(client, baseURI, update, qlVersion);
 		}
 		throw new UnsupportedQueryLanguageException("Unsupported query language " + ql);
 	}

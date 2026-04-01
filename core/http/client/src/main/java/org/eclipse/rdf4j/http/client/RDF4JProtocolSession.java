@@ -11,6 +11,7 @@
 package org.eclipse.rdf4j.http.client;
 
 import static org.eclipse.rdf4j.http.protocol.Protocol.TRANSACTION_SETTINGS_PREFIX;
+import static org.eclipse.rdf4j.http.protocol.Protocol.VERSION_MEDIA_TYPE_PARAM;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -72,6 +73,7 @@ import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.impl.LinkedHashModel;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.Dataset;
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -245,7 +247,7 @@ public class RDF4JProtocolSession extends SPARQLProtocolSession {
 		HttpGet method = applyAdditionalHeaders(new HttpGet(Protocol.getRepositoriesLocation(serverURL)));
 
 		try {
-			getTupleQueryResult(method, handler);
+			getTupleQueryResult(method, handler, VersionLabel.DEFAULT);
 		} catch (MalformedQueryException e) {
 			// This shouldn't happen as no queries are involved
 			logger.warn("Server reported unexpected malfored query error", e);
@@ -426,7 +428,7 @@ public class RDF4JProtocolSession extends SPARQLProtocolSession {
 			method = applyAdditionalHeaders(method);
 
 			try {
-				getRDF(method, statementCollector, true);
+				getRDF(method, statementCollector, true, VersionLabel.DEFAULT);
 			} catch (MalformedQueryException e) {
 				logger.warn("Server reported unexpected malformed query error", e);
 				throw new RepositoryException(e.getMessage(), e);
@@ -461,7 +463,7 @@ public class RDF4JProtocolSession extends SPARQLProtocolSession {
 		HttpGet method = applyAdditionalHeaders(new HttpGet(Protocol.getNamespacesLocation(getQueryURL())));
 
 		try {
-			getTupleQueryResult(method, handler);
+			getTupleQueryResult(method, handler, VersionLabel.DEFAULT);
 		} catch (MalformedQueryException e) {
 			logger.warn("Server reported unexpected malfored query error", e);
 			throw new RepositoryException(e.getMessage(), e);
@@ -569,7 +571,7 @@ public class RDF4JProtocolSession extends SPARQLProtocolSession {
 		HttpGet method = applyAdditionalHeaders(new HttpGet(Protocol.getContextsLocation(getQueryURL())));
 
 		try {
-			getTupleQueryResult(method, handler);
+			getTupleQueryResult(method, handler, VersionLabel.DEFAULT);
 		} catch (MalformedQueryException e) {
 			logger.warn("Server reported unexpected malfored query error", e);
 			throw new RepositoryException(e.getMessage(), e);
@@ -584,6 +586,14 @@ public class RDF4JProtocolSession extends SPARQLProtocolSession {
 
 	public void getStatements(Resource subj, IRI pred, Value obj, boolean includeInferred, RDFHandler handler,
 			Resource... contexts) throws IOException, RDFHandlerException, RepositoryException, UnauthorizedException,
+			QueryInterruptedException {
+		checkRepositoryURL();
+		getStatements(subj, pred, obj, includeInferred, handler, null, contexts);
+	}
+
+	public void getStatements(Resource subj, IRI pred, Value obj, boolean includeInferred, RDFHandler handler,
+			VersionLabel preferredRDFResultsVersion, Resource... contexts)
+			throws IOException, RDFHandlerException, RepositoryException, UnauthorizedException,
 			QueryInterruptedException {
 		checkRepositoryURL();
 
@@ -615,7 +625,7 @@ public class RDF4JProtocolSession extends SPARQLProtocolSession {
 			method = applyAdditionalHeaders(method);
 
 			try {
-				getRDF(method, handler, true);
+				getRDF(method, handler, true, preferredRDFResultsVersion);
 			} catch (MalformedQueryException e) {
 				logger.warn("Server reported unexpected malfored query error", e);
 				throw new RepositoryException(e.getMessage(), e);
@@ -933,15 +943,21 @@ public class RDF4JProtocolSession extends SPARQLProtocolSession {
 	}
 
 	@Override
-	protected HttpUriRequest getQueryMethod(QueryLanguage ql, String query, String baseURI, Dataset dataset,
+	protected HttpUriRequest getQueryMethod(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI,
+			Dataset dataset,
 			boolean includeInferred, int maxQueryTime, Binding... bindings) {
 		RequestBuilder builder;
 		String transactionURL = getTransactionURL();
 		if (transactionURL != null) {
 			builder = RequestBuilder.put(transactionURL);
-			builder.setHeader("Content-Type", Protocol.SPARQL_QUERY_MIME_TYPE + "; charset=utf-8");
+			String contentHeader = Protocol.SPARQL_QUERY_MIME_TYPE + "; charset=utf-8";
+			if (qlVersion != null) {
+				contentHeader += "; " + VERSION_MEDIA_TYPE_PARAM + "=" + qlVersion.getValue();
+			}
+			builder.setHeader("Content-Type", contentHeader);
 			builder.addParameter(Protocol.ACTION_PARAM_NAME, Action.QUERY.toString());
-			for (NameValuePair nvp : getQueryMethodParameters(ql, null, baseURI, dataset, includeInferred, maxQueryTime,
+			for (NameValuePair nvp : getQueryMethodParameters(ql, null, null, baseURI, dataset, includeInferred,
+					maxQueryTime,
 					bindings)) {
 				builder.addParameter(nvp);
 			}
@@ -954,7 +970,8 @@ public class RDF4JProtocolSession extends SPARQLProtocolSession {
 			builder.setHeader("Content-Type", Protocol.FORM_MIME_TYPE + "; charset=utf-8");
 
 			builder.setEntity(new UrlEncodedFormEntity(
-					getQueryMethodParameters(ql, query, baseURI, dataset, includeInferred, maxQueryTime, bindings),
+					getQueryMethodParameters(ql, qlVersion, query, baseURI, dataset, includeInferred, maxQueryTime,
+							bindings),
 					UTF8));
 		}
 		// functionality to provide custom http headers as required by the
@@ -966,15 +983,20 @@ public class RDF4JProtocolSession extends SPARQLProtocolSession {
 	}
 
 	@Override
-	protected HttpUriRequest getUpdateMethod(QueryLanguage ql, String update, String baseURI, Dataset dataset,
+	protected HttpUriRequest getUpdateMethod(QueryLanguage ql, VersionLabel qlVersion, String update, String baseURI,
+			Dataset dataset,
 			boolean includeInferred, int maxExecutionTime, Binding... bindings) {
 		RequestBuilder builder;
 		String transactionURL = getTransactionURL();
 		if (transactionURL != null) {
 			builder = RequestBuilder.put(transactionURL);
-			builder.addHeader("Content-Type", Protocol.SPARQL_UPDATE_MIME_TYPE + "; charset=utf-8");
+			String contentHeader = Protocol.SPARQL_UPDATE_MIME_TYPE + "; charset=utf-8";
+			if (qlVersion != null) {
+				contentHeader += "; " + VERSION_MEDIA_TYPE_PARAM + "=" + qlVersion.getValue();
+			}
+			builder.addHeader("Content-Type", contentHeader);
 			builder.addParameter(Protocol.ACTION_PARAM_NAME, Action.UPDATE.toString());
-			for (NameValuePair nvp : getUpdateMethodParameters(ql, null, baseURI, dataset, includeInferred,
+			for (NameValuePair nvp : getUpdateMethodParameters(ql, null, null, baseURI, dataset, includeInferred,
 					maxExecutionTime, bindings)) {
 				builder.addParameter(nvp);
 			}
@@ -985,9 +1007,9 @@ public class RDF4JProtocolSession extends SPARQLProtocolSession {
 		} else {
 			builder = RequestBuilder.post(getUpdateURL());
 			builder.addHeader("Content-Type", Protocol.FORM_MIME_TYPE + "; charset=utf-8");
-
-			builder.setEntity(new UrlEncodedFormEntity(getUpdateMethodParameters(ql, update, baseURI, dataset,
-					includeInferred, maxExecutionTime, bindings), UTF8));
+			builder.setEntity(
+					new UrlEncodedFormEntity(getUpdateMethodParameters(ql, qlVersion, update, baseURI, dataset,
+							includeInferred, maxExecutionTime, bindings), UTF8));
 		}
 		// functionality to provide custom http headers as required by the
 		// applications
@@ -1122,7 +1144,8 @@ public class RDF4JProtocolSession extends SPARQLProtocolSession {
 	}
 
 	@Override
-	protected List<NameValuePair> getQueryMethodParameters(QueryLanguage ql, String query, String baseURI,
+	protected List<NameValuePair> getQueryMethodParameters(QueryLanguage ql, VersionLabel qlVersion, String query,
+			String baseURI,
 			Dataset dataset, boolean includeInferred, int maxQueryTime, Binding... bindings) {
 		Objects.requireNonNull(ql, "QueryLanguage may not be null");
 
@@ -1151,6 +1174,10 @@ public class RDF4JProtocolSession extends SPARQLProtocolSession {
 			}
 		}
 
+		if (qlVersion != null) {
+			queryParams.add(new BasicNameValuePair(VERSION_MEDIA_TYPE_PARAM, qlVersion.getValue()));
+		}
+
 		for (int i = 0; i < bindings.length; i++) {
 			String paramName = Protocol.BINDING_PREFIX + bindings[i].getName();
 			String paramValue = Protocol.encodeValue(bindings[i].getValue());
@@ -1161,7 +1188,8 @@ public class RDF4JProtocolSession extends SPARQLProtocolSession {
 	}
 
 	@Override
-	protected List<NameValuePair> getUpdateMethodParameters(QueryLanguage ql, String update, String baseURI,
+	protected List<NameValuePair> getUpdateMethodParameters(QueryLanguage ql, VersionLabel qlVersion, String update,
+			String baseURI,
 			Dataset dataset, boolean includeInferred, int maxQueryTime, Binding... bindings) {
 		Objects.requireNonNull(ql, "QueryLanguage may not be null");
 
@@ -1202,6 +1230,9 @@ public class RDF4JProtocolSession extends SPARQLProtocolSession {
 			queryParams.add(new BasicNameValuePair(Protocol.TIMEOUT_PARAM_NAME, Integer.toString(maxQueryTime)));
 		}
 
+		if (qlVersion != null) {
+			queryParams.add(new BasicNameValuePair(VERSION_MEDIA_TYPE_PARAM, qlVersion.getValue()));
+		}
 		for (int i = 0; i < bindings.length; i++) {
 			String paramName = Protocol.BINDING_PREFIX + bindings[i].getName();
 			String paramValue = Protocol.encodeValue(bindings[i].getValue());

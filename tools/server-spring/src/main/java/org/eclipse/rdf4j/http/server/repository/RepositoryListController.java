@@ -95,7 +95,8 @@ public class RepositoryListController extends AbstractController {
 		TupleQueryResultWriterFactory factory = ProtocolUtil.getAcceptableService(request, response,
 				TupleQueryResultWriterRegistry.getInstance());
 
-		model.put(QueryResultView.FILENAME_HINT_KEY, "repositories");
+		model.put(QueryResultView.FILENAME_HINT_KEY, "repositories"); // TODO: do we also need a version here? I do not
+																		// think so.
 		model.put(QueryResultView.FACTORY_KEY, factory);
 		model.put(QueryResultView.HEADERS_ONLY, METHOD_HEAD.equals(request.getMethod()));
 

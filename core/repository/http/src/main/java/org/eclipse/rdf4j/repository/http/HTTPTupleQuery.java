@@ -16,6 +16,7 @@ import java.lang.ref.WeakReference;
 import org.eclipse.rdf4j.http.client.SPARQLProtocolSession;
 import org.eclipse.rdf4j.http.client.query.AbstractHTTPQuery;
 import org.eclipse.rdf4j.http.protocol.Protocol;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.QueryLanguage;
@@ -43,6 +44,12 @@ public class HTTPTupleQuery extends AbstractHTTPQuery implements TupleQuery {
 		this.conn = conn;
 	}
 
+	public HTTPTupleQuery(HTTPRepositoryConnection conn, QueryLanguage ql, VersionLabel qlVersion, String queryString,
+			String baseURI) {
+		super(conn.getSesameSession(), ql, qlVersion, queryString, baseURI);
+		this.conn = conn;
+	}
+
 	@Override
 	public TupleQueryResult evaluate() throws QueryEvaluationException {
 		SPARQLProtocolSession client = getHttpClient();
@@ -50,7 +57,8 @@ public class HTTPTupleQuery extends AbstractHTTPQuery implements TupleQuery {
 			conn.flushTransactionState(Protocol.Action.QUERY);
 
 			return client.sendTupleQuery(queryLanguage, queryString, baseURI, dataset, getIncludeInferred(),
-					getMaxExecutionTime(), ((WeakReference<?>) null), getBindingsArray());
+					getMaxExecutionTime(), ((WeakReference<?>) null), qlVersion, preferredRDFResultsVersion,
+					getBindingsArray());
 		} catch (IOException | RepositoryException | MalformedQueryException e) {
 			throw new HTTPQueryEvaluationException(e.getMessage(), e);
 		}
@@ -63,7 +71,7 @@ public class HTTPTupleQuery extends AbstractHTTPQuery implements TupleQuery {
 		try {
 			conn.flushTransactionState(Protocol.Action.QUERY);
 			client.sendTupleQuery(queryLanguage, queryString, baseURI, dataset, includeInferred, getMaxExecutionTime(),
-					handler, getBindingsArray());
+					handler, qlVersion, preferredRDFResultsVersion, getBindingsArray());
 		} catch (IOException | RepositoryException | MalformedQueryException e) {
 			throw new HTTPQueryEvaluationException(e.getMessage(), e);
 		}

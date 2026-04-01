@@ -53,19 +53,10 @@ import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.impl.LinkedHashModel;
 import org.eclipse.rdf4j.model.impl.SimpleNamespace;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.model.vocabulary.RDF4J;
 import org.eclipse.rdf4j.model.vocabulary.SESAME;
-import org.eclipse.rdf4j.query.BindingSet;
-import org.eclipse.rdf4j.query.BooleanQuery;
-import org.eclipse.rdf4j.query.GraphQuery;
-import org.eclipse.rdf4j.query.MalformedQueryException;
-import org.eclipse.rdf4j.query.Query;
-import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.query.QueryInterruptedException;
-import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.TupleQuery;
-import org.eclipse.rdf4j.query.TupleQueryResult;
-import org.eclipse.rdf4j.query.Update;
+import org.eclipse.rdf4j.query.*;
 import org.eclipse.rdf4j.query.parser.QueryParserUtil;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.eclipse.rdf4j.repository.RepositoryResult;
@@ -93,7 +84,7 @@ import org.eclipse.rdf4j.rio.helpers.StatementCollector;
  * @see org.eclipse.rdf4j.http.protocol.UnauthorizedException
  * @see org.eclipse.rdf4j.http.protocol.NotAllowedException
  */
-class HTTPRepositoryConnection extends AbstractRepositoryConnection implements HttpClientDependent {
+class HTTPRepositoryConnection extends AbstractRepositoryConnection implements HttpClientDependent, RDFVersionAware {
 
 	/*-----------*
 	 * Variables *
@@ -217,8 +208,29 @@ class HTTPRepositoryConnection extends AbstractRepositoryConnection implements H
 	}
 
 	@Override
+	public Query prepareQuery(QueryLanguage ql, VersionLabel qlVersion, String queryString, String baseURI) {
+		if (QueryLanguage.SPARQL.equals(ql)) {
+			String strippedQuery = QueryParserUtil.removeSPARQLQueryProlog(queryString).toUpperCase();
+			if (strippedQuery.startsWith("SELECT")) {
+				return prepareTupleQuery(ql, qlVersion, queryString, baseURI);
+			} else if (strippedQuery.startsWith("ASK")) {
+				return prepareBooleanQuery(ql, qlVersion, queryString, baseURI);
+			} else {
+				return prepareGraphQuery(ql, qlVersion, queryString, baseURI);
+			}
+		} else {
+			throw new UnsupportedOperationException("Operation not supported for query language " + ql);
+		}
+	}
+
+	@Override
 	public TupleQuery prepareTupleQuery(QueryLanguage ql, String queryString, String baseURI) {
 		return new HTTPTupleQuery(this, ql, queryString, baseURI);
+	}
+
+	@Override
+	public TupleQuery prepareTupleQuery(QueryLanguage ql, VersionLabel qlVersion, String queryString, String baseURI) {
+		return new HTTPTupleQuery(this, ql, qlVersion, queryString, baseURI);
 	}
 
 	@Override
@@ -227,8 +239,19 @@ class HTTPRepositoryConnection extends AbstractRepositoryConnection implements H
 	}
 
 	@Override
+	public GraphQuery prepareGraphQuery(QueryLanguage ql, VersionLabel qlVersion, String queryString, String baseURI) {
+		return new HTTPGraphQuery(this, ql, qlVersion, queryString, baseURI);
+	}
+
+	@Override
 	public BooleanQuery prepareBooleanQuery(QueryLanguage ql, String queryString, String baseURI) {
 		return new HTTPBooleanQuery(this, ql, queryString, baseURI);
+	}
+
+	@Override
+	public BooleanQuery prepareBooleanQuery(QueryLanguage ql, VersionLabel qlVersion, String queryString,
+			String baseURI) {
+		return new HTTPBooleanQuery(this, ql, qlVersion, queryString, baseURI);
 	}
 
 	@Override
@@ -263,6 +286,31 @@ class HTTPRepositoryConnection extends AbstractRepositoryConnection implements H
 		} catch (RDFHandlerException e) {
 			// found a bug in StatementCollector?
 			throw new RuntimeException(e);
+		}
+	}
+
+	@Override
+	public RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj, boolean includeInferred,
+			VersionLabel preferredRDFResultVersion, Resource... contexts) throws RepositoryException {
+		try {
+			StatementCollector collector = new StatementCollector();
+			exportStatements(subj, pred, obj, includeInferred, collector, preferredRDFResultVersion, contexts);
+			return createRepositoryResult(collector.getStatements());
+		} catch (RDFHandlerException e) {
+			// found a bug in StatementCollector?
+			throw new RuntimeException(e);
+		}
+	}
+
+	@Override
+	public void exportStatements(Resource subj, IRI pred, Value obj, boolean includeInferred, RDFHandler handler,
+			VersionLabel preferredRDFResultVersion, Resource... contexts)
+			throws RDFHandlerException, RepositoryException {
+		flushTransactionState(Action.GET);
+		try {
+			client.getStatements(subj, pred, obj, includeInferred, handler, preferredRDFResultVersion, contexts);
+		} catch (IOException | QueryInterruptedException e) {
+			throw new RepositoryException(e);
 		}
 	}
 
@@ -819,6 +867,12 @@ class HTTPRepositoryConnection extends AbstractRepositoryConnection implements H
 	public Update prepareUpdate(QueryLanguage ql, String update, String baseURI)
 			throws RepositoryException, MalformedQueryException {
 		return new HTTPUpdate(this, ql, update, baseURI);
+	}
+
+	@Override
+	public Update prepareUpdate(QueryLanguage ql, VersionLabel qlVersion, String update, String baseURI)
+			throws RepositoryException, MalformedQueryException {
+		return new HTTPUpdate(this, ql, qlVersion, update, baseURI);
 	}
 
 	/**

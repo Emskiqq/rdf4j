@@ -31,6 +31,7 @@ import org.eclipse.rdf4j.http.server.repository.statements.ExportStatementsView;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
@@ -138,11 +139,14 @@ public class GraphController extends AbstractController {
 
 		RDFWriterFactory rdfWriterFactory = ProtocolUtil.getAcceptableService(request, response,
 				RDFWriterRegistry.getInstance());
+		VersionLabel preferredRDFVersion = ProtocolUtil.getPreferredRDFVersion(request, rdfWriterFactory,
+				RDFWriterRegistry.getInstance());
 
 		Map<String, Object> model = new HashMap<>();
 
 		model.put(ExportStatementsView.CONTEXTS_KEY, new Resource[] { graph });
 		model.put(ExportStatementsView.FACTORY_KEY, rdfWriterFactory);
+		model.put(ExportStatementsView.PREFERRED_OUTPUT_RDF_VERSION, preferredRDFVersion);
 		model.put(ExportStatementsView.USE_INFERENCING_KEY, true);
 		model.put(ExportStatementsView.HEADERS_ONLY, METHOD_HEAD.equals(request.getMethod()));
 		return new ModelAndView(ExportStatementsView.getInstance(), model);

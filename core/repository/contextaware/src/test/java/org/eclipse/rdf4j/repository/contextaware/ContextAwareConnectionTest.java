@@ -22,6 +22,7 @@ import java.util.Set;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.Dataset;
 import org.eclipse.rdf4j.query.GraphQuery;
 import org.eclipse.rdf4j.query.GraphQueryResult;
@@ -113,6 +114,8 @@ public class ContextAwareConnectionTest {
 
 	IRI context = SimpleValueFactory.getInstance().createIRI("urn:test:context");
 
+	VersionLabel versionLabel = VersionLabel.RDF_1_2_FULL;
+
 	String queryString = "SELECT ?o WHERE { ?s ?p ?o}";
 
 	@Test
@@ -120,10 +123,11 @@ public class ContextAwareConnectionTest {
 		RepositoryConnection stub = new RepositoryConnectionStub() {
 
 			@Override
-			public GraphQuery prepareGraphQuery(QueryLanguage ql, String query, String baseURI)
+			public GraphQuery prepareGraphQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
 					throws MalformedQueryException, RepositoryException {
 				assertEquals(SPARQL, ql);
 				assertEquals(queryString, query);
+				assertEquals(versionLabel, qlVersion);
 				return new GraphQueryStub() {
 
 					@Override
@@ -138,7 +142,7 @@ public class ContextAwareConnectionTest {
 		Repository repo = stub.getRepository();
 		ContextAwareConnection con = new ContextAwareConnection(repo, stub);
 		con.setReadContexts(context);
-		con.prepareGraphQuery(SPARQL, queryString, null);
+		con.prepareGraphQuery(SPARQL, versionLabel, queryString, null);
 	}
 
 	@Test
@@ -146,10 +150,11 @@ public class ContextAwareConnectionTest {
 		RepositoryConnection stub = new RepositoryConnectionStub() {
 
 			@Override
-			public Query prepareQuery(QueryLanguage ql, String query, String baseURI)
+			public Query prepareQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
 					throws MalformedQueryException, RepositoryException {
 				assertEquals(SPARQL, ql);
 				assertEquals(queryString, query);
+				assertEquals(versionLabel, qlVersion);
 				return new QueryStub() {
 
 					@Override
@@ -164,7 +169,7 @@ public class ContextAwareConnectionTest {
 		Repository repo = stub.getRepository();
 		ContextAwareConnection con = new ContextAwareConnection(repo, stub);
 		con.setReadContexts(context);
-		con.prepareQuery(SPARQL, queryString, null);
+		con.prepareQuery(SPARQL, versionLabel, queryString, null);
 	}
 
 	@Test
@@ -172,10 +177,11 @@ public class ContextAwareConnectionTest {
 		RepositoryConnection stub = new RepositoryConnectionStub() {
 
 			@Override
-			public TupleQuery prepareTupleQuery(QueryLanguage ql, String query, String baseURI)
+			public TupleQuery prepareTupleQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
 					throws MalformedQueryException, RepositoryException {
 				assertEquals(SPARQL, ql);
 				assertEquals(queryString, query);
+				assertEquals(versionLabel, qlVersion);
 				return new TupleQueryStub() {
 
 					@Override
@@ -190,7 +196,88 @@ public class ContextAwareConnectionTest {
 		Repository repo = stub.getRepository();
 		ContextAwareConnection con = new ContextAwareConnection(repo, stub);
 		con.setReadContexts(context);
-		con.prepareTupleQuery(SPARQL, queryString, null);
+		con.prepareTupleQuery(SPARQL, versionLabel, queryString, null);
+	}
+
+	@Test
+	public void testGraphQueryVersionAware() {
+		RepositoryConnection stub = new RepositoryConnectionStub() {
+
+			@Override
+			public GraphQuery prepareGraphQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+					throws MalformedQueryException, RepositoryException {
+				assertEquals(SPARQL, ql);
+				assertEquals(queryString, query);
+				assertEquals(versionLabel, qlVersion);
+				return new GraphQueryStub() {
+
+					@Override
+					public void setDataset(Dataset dataset) {
+						Set<IRI> contexts = Collections.singleton(context);
+						assertEquals(contexts, dataset.getDefaultGraphs());
+						super.setDataset(dataset);
+					}
+				};
+			}
+		};
+		Repository repo = stub.getRepository();
+		ContextAwareConnection con = new ContextAwareConnection(repo, stub);
+		con.setReadContexts(context);
+		con.prepareGraphQuery(SPARQL, versionLabel, queryString, null);
+	}
+
+	@Test
+	public void testQueryVersionAware() {
+		RepositoryConnection stub = new RepositoryConnectionStub() {
+
+			@Override
+			public Query prepareQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+					throws MalformedQueryException, RepositoryException {
+				assertEquals(SPARQL, ql);
+				assertEquals(queryString, query);
+				assertEquals(versionLabel, qlVersion);
+				return new QueryStub() {
+
+					@Override
+					public void setDataset(Dataset dataset) {
+						Set<IRI> contexts = Collections.singleton(context);
+						assertEquals(contexts, dataset.getDefaultGraphs());
+						super.setDataset(dataset);
+					}
+				};
+			}
+		};
+		Repository repo = stub.getRepository();
+		ContextAwareConnection con = new ContextAwareConnection(repo, stub);
+		con.setReadContexts(context);
+		con.prepareQuery(SPARQL, versionLabel, queryString, null);
+	}
+
+	@Test
+	public void testTupleQueryVersionAware() {
+		RepositoryConnection stub = new RepositoryConnectionStub() {
+
+			@Override
+			public TupleQuery prepareTupleQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+					throws MalformedQueryException, RepositoryException {
+				assertEquals(SPARQL, ql);
+				assertEquals(queryString, query);
+				assertEquals(versionLabel, qlVersion);
+				return new TupleQueryStub() {
+
+					@Override
+					public void setDataset(Dataset dataset) {
+						Set<IRI> contexts = Collections.singleton(context);
+						assertEquals(contexts, dataset.getDefaultGraphs());
+						super.setDataset(dataset);
+					}
+				};
+			}
+		};
+		Repository repo = stub.getRepository();
+		ContextAwareConnection con = new ContextAwareConnection(repo, stub);
+		con.setReadContexts(context);
+		con.prepareTupleQuery(SPARQL, versionLabel, queryString, null);
 	}
 
 	@Test

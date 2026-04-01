@@ -111,7 +111,8 @@ public class SPARQLProtocolSessionTest {
 		// We only send the query once, internally the retry handler makes sure the first 408 response causes
 		// a retry. From user perspective it just looks like everything went fine, the closed connection is gracefully
 		// refreshed.
-		sparqlSession.sendTupleQuery(QueryLanguage.SPARQL, "SELECT * WHERE { ?s ?p ?o}", null, null, true, -1, handler);
+		sparqlSession.sendTupleQuery(QueryLanguage.SPARQL, "SELECT * WHERE { ?s ?p ?o}", null, null, true, -1, handler,
+				null, null);
 		assertThat(out.toString()).startsWith("{");
 	}
 
@@ -161,11 +162,11 @@ public class SPARQLProtocolSessionTest {
 		ByteArrayOutputStream out1 = new ByteArrayOutputStream();
 		TupleQueryResultHandler handler1 = Mockito.spy(new SPARQLStarResultsJSONWriter(out1));
 		sparqlSession.sendTupleQuery(QueryLanguage.SPARQL, "SELECT * WHERE { ?s ?p ?o}", null, null, true, -1,
-				handler1);
+				handler1, null, null);
 		ByteArrayOutputStream out2 = new ByteArrayOutputStream();
 		TupleQueryResultHandler handler2 = Mockito.spy(new SPARQLStarResultsJSONWriter(out2));
 		sparqlSession.sendTupleQuery(QueryLanguage.SPARQL, "SELECT * WHERE { ?s ?p ?o}", null, null, true, -1,
-				handler2);
+				handler2, null, null);
 		assertThat(out1.toString()).startsWith("{");
 		assertThat(out2.toString()).startsWith("{");
 
@@ -174,7 +175,7 @@ public class SPARQLProtocolSessionTest {
 		ByteArrayOutputStream out3 = new ByteArrayOutputStream();
 		TupleQueryResultHandler handler3 = Mockito.spy(new SPARQLStarResultsJSONWriter(out3));
 		sparqlSession.sendTupleQuery(QueryLanguage.SPARQL, "SELECT * WHERE { ?s ?p ?o}", null, null, true, -1,
-				handler3);
+				handler3, null, null);
 		assertThat(out3.toString()).startsWith("{");
 	}
 
@@ -194,7 +195,8 @@ public class SPARQLProtocolSessionTest {
 
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		TupleQueryResultHandler handler = Mockito.spy(new SPARQLStarResultsJSONWriter(out));
-		sparqlSession.sendTupleQuery(QueryLanguage.SPARQL, "SELECT * WHERE { ?s ?p ?o}", null, null, true, -1, handler);
+		sparqlSession.sendTupleQuery(QueryLanguage.SPARQL, "SELECT * WHERE { ?s ?p ?o}", null, null, true, -1, handler,
+				null, null);
 
 		// If not passed through, the QueryResultWriter methods should have been invoked
 		verify(handler, times(1)).startQueryResult(anyList());
@@ -219,7 +221,8 @@ public class SPARQLProtocolSessionTest {
 
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		SPARQLStarResultsXMLWriter handler = Mockito.spy(new SPARQLStarResultsXMLWriter(out));
-		sparqlSession.sendTupleQuery(QueryLanguage.SPARQL, "SELECT * WHERE { ?s ?p ?o}", null, null, true, -1, handler);
+		sparqlSession.sendTupleQuery(QueryLanguage.SPARQL, "SELECT * WHERE { ?s ?p ?o}", null, null, true, -1, handler,
+				null, null);
 
 		// SPARQL-star XML sink should accept SPARQL/XML data and pass directly to OutputStream
 		verify(handler, never()).startQueryResult(anyList());
@@ -245,7 +248,8 @@ public class SPARQLProtocolSessionTest {
 		ByteArrayOutputStream out = new ByteArrayOutputStream();
 		SPARQLStarResultsXMLWriter handler = Mockito.spy(new SPARQLStarResultsXMLWriter(out));
 		sparqlSession.setPassThroughEnabled(false);
-		sparqlSession.sendTupleQuery(QueryLanguage.SPARQL, "SELECT * WHERE { ?s ?p ?o}", null, null, true, -1, handler);
+		sparqlSession.sendTupleQuery(QueryLanguage.SPARQL, "SELECT * WHERE { ?s ?p ?o}", null, null, true, -1, handler,
+				null, null);
 
 		// If not passed through, the QueryResultWriter methods should have been invoked
 		verify(handler, times(1)).startQueryResult(anyList());

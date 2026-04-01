@@ -12,6 +12,7 @@ package org.eclipse.rdf4j.query;
 
 import org.eclipse.rdf4j.common.annotation.Experimental;
 import org.eclipse.rdf4j.model.Statement;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.explanation.Explanation;
 
 /**
@@ -44,6 +45,34 @@ public interface Query extends Operation {
 		 * bindings} as the result.
 		 */
 		TUPLE
+	}
+
+	/**
+	 * @return Returns the {@link VersionLabel} of the preferred RDF version for the query response.
+	 */
+	default VersionLabel getPreferredRDFResultsVersion() {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * @param preferredRDFResultsVersion the preferred RDF version of the query response.
+	 */
+	default void setPreferredRDFResultsVersion(VersionLabel preferredRDFResultsVersion) {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * @return Returns the {@link VersionLabel} of the SPARQL version of the query.
+	 */
+	default VersionLabel getQLVersion() {
+		throw new UnsupportedOperationException();
+	}
+
+	/**
+	 * @param qlVersion the SPARQL version of the query.
+	 */
+	default void setQLVersion(VersionLabel qlVersion) {
+		throw new UnsupportedOperationException();
 	}
 
 	/**

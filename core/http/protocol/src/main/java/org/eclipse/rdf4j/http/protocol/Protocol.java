@@ -211,6 +211,11 @@ public abstract class Protocol {
 	public static final String ACCEPT_PARAM_NAME = "Accept";
 
 	/**
+	 * Media type parameter name for the preferred RDF version in the Media Types of the Accept HTTP header.
+	 */
+	public static final String VERSION_MEDIA_TYPE_PARAM = "version";
+
+	/**
 	 * Parameter name for the isolation level used in transactions.
 	 *
 	 * @see #TRANSACTION_SETTINGS_PREFIX

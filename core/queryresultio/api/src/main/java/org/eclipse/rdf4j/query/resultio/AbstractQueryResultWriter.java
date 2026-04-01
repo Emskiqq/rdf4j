@@ -16,11 +16,13 @@ import java.util.List;
 
 import org.eclipse.rdf4j.common.io.Sink;
 import org.eclipse.rdf4j.common.lang.FileFormat;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.TupleQueryResultHandlerException;
 import org.eclipse.rdf4j.rio.RioSetting;
 import org.eclipse.rdf4j.rio.WriterConfig;
 import org.eclipse.rdf4j.rio.helpers.BasicWriterSettings;
+import org.eclipse.rdf4j.rio.helpers.RDFVersionSettings;
 import org.eclipse.rdf4j.rio.helpers.TripleTermUtil;
 
 /**

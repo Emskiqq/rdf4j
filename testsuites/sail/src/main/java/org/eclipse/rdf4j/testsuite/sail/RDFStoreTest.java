@@ -35,6 +35,7 @@ import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.base.CoreDatatype;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.model.vocabulary.RDFS;
 import org.eclipse.rdf4j.model.vocabulary.XSD;
@@ -602,10 +603,10 @@ public abstract class RDFStoreTest {
 		assertEquals(2, countElements(con.getStatements(null, null, null, false, (Resource) null)),
 				"statements without context should equal 2");
 
-		assertEquals(5, countElements(con.getStatements(null, null, null, false, null, context1)),
+		assertEquals(5, countElements(con.getStatements(null, null, null, false, (Resource) null, context1)),
 				"Statements without context and statements in context 1 together should total 5");
 
-		assertEquals(5, countElements(con.getStatements(null, null, null, false, null, context2)),
+		assertEquals(5, countElements(con.getStatements(null, null, null, false, (Resource) null, context2)),
 				"Statements without context and statements in context 2 together should total 5");
 
 		assertEquals(6, countElements(con.getStatements(null, null, null, false, context1, context2)),
@@ -620,7 +621,7 @@ public abstract class RDFStoreTest {
 
 		assertEquals(6, countAllElements(), "Repository should contain 6 statements");
 
-		assertEquals(3, countElements(con.getStatements(null, null, null, false, null, context1)),
+		assertEquals(3, countElements(con.getStatements(null, null, null, false, (Resource) null, context1)),
 				"Statements without context and statements in context 1 together should total 3");
 
 		assertEquals(5, countElements(con.getStatements(null, null, null, false, context2, null)),

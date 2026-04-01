@@ -14,14 +14,8 @@ import java.net.MalformedURLException;
 import java.net.URL;
 
 import org.eclipse.rdf4j.model.IRI;
-import org.eclipse.rdf4j.query.BooleanQuery;
-import org.eclipse.rdf4j.query.Dataset;
-import org.eclipse.rdf4j.query.GraphQuery;
-import org.eclipse.rdf4j.query.MalformedQueryException;
-import org.eclipse.rdf4j.query.Query;
-import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.TupleQuery;
+import org.eclipse.rdf4j.model.util.VersionLabel;
+import org.eclipse.rdf4j.query.*;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.eclipse.rdf4j.repository.base.RepositoryConnectionWrapper;
 import org.eclipse.rdf4j.repository.sail.SailBooleanQuery;
@@ -49,9 +43,21 @@ public class DatasetRepositoryConnection extends RepositoryConnectionWrapper {
 	}
 
 	@Override
+	public BooleanQuery prepareBooleanQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		return wrap(delegate.prepareBooleanQuery(ql, qlVersion, query, baseURI));
+	}
+
+	@Override
 	public GraphQuery prepareGraphQuery(QueryLanguage ql, String query, String baseURI)
 			throws MalformedQueryException, RepositoryException {
 		return wrap(delegate.prepareGraphQuery(ql, query, baseURI));
+	}
+
+	@Override
+	public GraphQuery prepareGraphQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		return wrap(delegate.prepareGraphQuery(ql, qlVersion, query, baseURI));
 	}
 
 	@Override
@@ -61,9 +67,21 @@ public class DatasetRepositoryConnection extends RepositoryConnectionWrapper {
 	}
 
 	@Override
+	public Query prepareQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		return wrap(delegate.prepareQuery(ql, qlVersion, query, baseURI));
+	}
+
+	@Override
 	public TupleQuery prepareTupleQuery(QueryLanguage ql, String query, String baseURI)
 			throws MalformedQueryException, RepositoryException {
 		return wrap(delegate.prepareTupleQuery(ql, query, baseURI));
+	}
+
+	@Override
+	public TupleQuery prepareTupleQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		return wrap(delegate.prepareTupleQuery(ql, qlVersion, query, baseURI));
 	}
 
 	void loadDataset(Dataset datasets) throws QueryEvaluationException {

@@ -15,6 +15,7 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryLanguage;
 import org.eclipse.rdf4j.query.Update;
@@ -72,6 +73,13 @@ public class ConfigurableSailRepositoryConnection extends SailRepositoryConnecti
 	}
 
 	@Override
+	public RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj, boolean includeInferred,
+			VersionLabel preferredRDFVersion, Resource... contexts) throws RepositoryException {
+		checkOperations(false);
+		return super.getStatements(subj, pred, obj, includeInferred, preferredRDFVersion, contexts);
+	}
+
+	@Override
 	public void add(Resource subject, IRI predicate, Value object, Resource... contexts)
 			throws RepositoryException {
 		checkOperations(true);
@@ -87,6 +95,14 @@ public class ConfigurableSailRepositoryConnection extends SailRepositoryConnecti
 	}
 
 	@Override
+	public SailBooleanQuery prepareBooleanQuery(QueryLanguage ql, VersionLabel qlVersion,
+			String queryString, String baseURI)
+			throws MalformedQueryException {
+		checkOperations(false);
+		return super.prepareBooleanQuery(ql, qlVersion, queryString, baseURI);
+	}
+
+	@Override
 	public SailGraphQuery prepareGraphQuery(QueryLanguage ql,
 			String queryString, String baseURI)
 			throws MalformedQueryException {
@@ -95,10 +111,25 @@ public class ConfigurableSailRepositoryConnection extends SailRepositoryConnecti
 	}
 
 	@Override
+	public SailGraphQuery prepareGraphQuery(QueryLanguage ql, VersionLabel qlVersion,
+			String queryString, String baseURI)
+			throws MalformedQueryException {
+		checkOperations(false);
+		return super.prepareGraphQuery(ql, qlVersion, queryString, baseURI);
+	}
+
+	@Override
 	public SailQuery prepareQuery(QueryLanguage ql, String queryString,
 			String baseURI) throws MalformedQueryException {
 		checkOperations(false);
 		return super.prepareQuery(ql, queryString, baseURI);
+	}
+
+	@Override
+	public SailQuery prepareQuery(QueryLanguage ql, VersionLabel qlVersion, String queryString,
+			String baseURI) throws MalformedQueryException {
+		checkOperations(false);
+		return super.prepareQuery(ql, qlVersion, queryString, baseURI);
 	}
 
 	@Override
@@ -110,11 +141,27 @@ public class ConfigurableSailRepositoryConnection extends SailRepositoryConnecti
 	}
 
 	@Override
+	public SailTupleQuery prepareTupleQuery(QueryLanguage ql, VersionLabel qlVersion,
+			String queryString, String baseURI)
+			throws MalformedQueryException {
+		checkOperations(false);
+		return super.prepareTupleQuery(ql, qlVersion, queryString, baseURI);
+	}
+
+	@Override
 	public Update prepareUpdate(QueryLanguage ql, String update,
 			String baseURI) throws RepositoryException,
 			MalformedQueryException {
 		checkOperations(true);
 		return super.prepareUpdate(ql, update, baseURI);
+	}
+
+	@Override
+	public Update prepareUpdate(QueryLanguage ql, VersionLabel qlVersion, String update,
+			String baseURI) throws RepositoryException,
+			MalformedQueryException {
+		checkOperations(true);
+		return super.prepareUpdate(ql, qlVersion, update, baseURI);
 	}
 
 	private void checkOperations(boolean isWrite) throws FailingRepositoryException {

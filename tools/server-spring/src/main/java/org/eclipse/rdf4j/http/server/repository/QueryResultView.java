@@ -11,12 +11,14 @@
 package org.eclipse.rdf4j.http.server.repository;
 
 import static org.eclipse.rdf4j.http.protocol.Protocol.QUERY_PARAM_NAME;
+import static org.eclipse.rdf4j.http.protocol.Protocol.VERSION_MEDIA_TYPE_PARAM;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Map;
 
 import org.eclipse.rdf4j.common.lang.FileFormat;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,6 +53,13 @@ public abstract class QueryResultView implements View {
 	public static final String FACTORY_KEY = "factory";
 
 	/**
+	 * Key by which the preferred RDF version is stored in the model.
+	 */
+	public static final String PREFERRED_OUTPUT_RDF_VERSION = "preferredOutputRDFVersion";
+
+	public static final String INPUT_RDF_VERSION = "inputRDFVersion";
+
+	/**
 	 * Key by which a filename hint is stored in the model. The filename hint may be used to present the client with a
 	 * suggestion for a filename to use for storing the result.
 	 */
@@ -81,11 +90,28 @@ public abstract class QueryResultView implements View {
 	protected abstract void renderInternal(Map model, HttpServletRequest request, HttpServletResponse response)
 			throws IOException;
 
-	protected void setContentType(HttpServletResponse response, FileFormat fileFormat) throws IOException {
+	protected void setContentType(HttpServletResponse response, FileFormat fileFormat)
+			throws IOException {
 		String mimeType = fileFormat.getDefaultMIMEType();
 		if (fileFormat.hasCharset()) {
 			Charset charset = fileFormat.getCharset();
 			mimeType += "; charset=" + charset.name();
+		}
+		response.setContentType(mimeType);
+	}
+
+	// TODO: Use this or change the version, depending on what approach we decide on: ignore the
+	// version/always return 1.2 or do indeed follow the user's requirements.
+	protected void setContentType(HttpServletResponse response, FileFormat fileFormat, VersionLabel versionLabel)
+			throws IOException {
+		String mimeType = fileFormat.getDefaultMIMEType();
+		if (fileFormat.hasCharset()) {
+			Charset charset = fileFormat.getCharset();
+			mimeType += "; charset=" + charset.name();
+		}
+		if (versionLabel != null) {
+			mimeType += "; " + VERSION_MEDIA_TYPE_PARAM + "=" + versionLabel.getValue();
+
 		}
 		response.setContentType(mimeType);
 	}

@@ -23,6 +23,7 @@ import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryLanguage;
 import org.eclipse.rdf4j.query.Update;
@@ -103,16 +104,20 @@ public class InterceptorTest {
 	@Test
 	public void testUpdate() {
 		final Update updateStub = new UpdateStub() {
-
 			@Override
 			public void execute() throws UpdateExecutionException {
 				fail();
+			}
+
+			@Override
+			public VersionLabel getQLVersion() {
+				return VersionLabel.DEFAULT;
 			}
 		};
 		final RepositoryConnection stub = new RepositoryConnectionStub() {
 
 			@Override
-			public Update prepareUpdate(QueryLanguage ql, String query, String baseURI)
+			public Update prepareUpdate(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
 					throws MalformedQueryException, RepositoryException {
 				return updateStub;
 			}
@@ -126,13 +131,15 @@ public class InterceptorTest {
 					Update operation) {
 				assertEquals(stub, conn);
 				assertEquals(SPARQL, ql);
+				assertEquals(VersionLabel.DEFAULT, operation.getQLVersion());
 				assertEquals("DELETE DATA { <> <> <> }", update);
 				assertEquals("http://example.com/", baseURI);
 				assertEquals(updateStub, operation);
 				return true;
 			}
 		});
-		Update update = con.prepareUpdate(SPARQL, "DELETE DATA { <> <> <> }", "http://example.com/");
+		Update update = con.prepareUpdate(SPARQL, VersionLabel.DEFAULT, "DELETE DATA { <> <> <> }",
+				"http://example.com/");
 		update.execute();
 	}
 

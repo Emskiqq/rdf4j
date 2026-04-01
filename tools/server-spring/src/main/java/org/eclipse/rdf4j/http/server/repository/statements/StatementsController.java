@@ -49,6 +49,7 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryInterruptedException;
 import org.eclipse.rdf4j.query.QueryLanguage;
@@ -179,6 +180,9 @@ public class StatementsController extends AbstractController {
 		// determine if inferred triples should be included in query evaluation
 		boolean includeInferred = ProtocolUtil.parseBooleanParam(request, INCLUDE_INFERRED_PARAM_NAME, true);
 
+		// take the RDF version of the content:
+		VersionLabel qlVersion = ProtocolUtil.getContentRDFVersion(request);
+
 		// build a dataset, if specified
 		String[] defaultRemoveGraphURIs = request.getParameterValues(REMOVE_GRAPH_PARAM_NAME);
 		String[] defaultInsertGraphURIs = request.getParameterValues(INSERT_GRAPH_PARAM_NAME);
@@ -236,7 +240,7 @@ public class StatementsController extends AbstractController {
 
 		final int maxQueryTime = ProtocolUtil.parseTimeoutParam(request);
 		try (RepositoryConnection repositoryCon = RepositoryInterceptor.getRepositoryConnection(request)) {
-			Update update = repositoryCon.prepareUpdate(queryLn, sparqlUpdateString, baseURI);
+			Update update = repositoryCon.prepareUpdate(queryLn, qlVersion, sparqlUpdateString, baseURI);
 
 			update.setIncludeInferred(includeInferred);
 			update.setMaxExecutionTime(maxQueryTime);
@@ -311,6 +315,8 @@ public class StatementsController extends AbstractController {
 
 		RDFWriterFactory rdfWriterFactory = ProtocolUtil.getAcceptableService(request, response,
 				RDFWriterRegistry.getInstance());
+		VersionLabel preferredRDFVersion = ProtocolUtil.getPreferredRDFVersion(request, rdfWriterFactory,
+				RDFWriterRegistry.getInstance());
 
 		Map<String, Object> model = new HashMap<>();
 		model.put(ExportStatementsView.SUBJECT_KEY, subj);
@@ -319,6 +325,7 @@ public class StatementsController extends AbstractController {
 		model.put(ExportStatementsView.CONTEXTS_KEY, contexts);
 		model.put(ExportStatementsView.USE_INFERENCING_KEY, Boolean.valueOf(useInferencing));
 		model.put(ExportStatementsView.FACTORY_KEY, rdfWriterFactory);
+		model.put(ExportStatementsView.PREFERRED_OUTPUT_RDF_VERSION, preferredRDFVersion);
 		model.put(ExportStatementsView.HEADERS_ONLY, METHOD_HEAD.equals(request.getMethod()));
 		return new ModelAndView(ExportStatementsView.getInstance(), model);
 	}

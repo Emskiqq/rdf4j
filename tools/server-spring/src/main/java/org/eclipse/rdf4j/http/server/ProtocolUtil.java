@@ -12,15 +12,15 @@ package org.eclipse.rdf4j.http.server;
 
 import static jakarta.servlet.http.HttpServletResponse.SC_BAD_REQUEST;
 import static jakarta.servlet.http.HttpServletResponse.SC_NOT_ACCEPTABLE;
+import static org.eclipse.rdf4j.http.protocol.Protocol.QUERY_PARAM_NAME;
 
-import java.util.Collection;
-import java.util.Enumeration;
-import java.util.LinkedHashSet;
-import java.util.Optional;
+import java.util.*;
 
 import org.eclipse.rdf4j.common.lang.FileFormat;
 import org.eclipse.rdf4j.common.lang.service.FileFormatServiceRegistry;
+import org.eclipse.rdf4j.common.webapp.util.HeaderElement;
 import org.eclipse.rdf4j.common.webapp.util.HttpServerUtil;
+import org.eclipse.rdf4j.common.webapp.util.Parameter;
 import org.eclipse.rdf4j.http.protocol.Protocol;
 import org.eclipse.rdf4j.http.protocol.error.ErrorInfo;
 import org.eclipse.rdf4j.http.protocol.error.ErrorType;
@@ -28,6 +28,7 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -180,6 +181,69 @@ public class ProtocolUtil {
 			// No acceptable format was found, send 406 as required by RFC 2616
 			throw new ClientHTTPException(SC_NOT_ACCEPTABLE, "No acceptable file format found.");
 		}
+	}
+
+	public static <FF extends FileFormat, S> VersionLabel getPreferredRDFVersion(HttpServletRequest request, S factory,
+			FileFormatServiceRegistry<FF, S> serviceRegistry) {
+		List<HeaderElement> acceptElements = HttpServerUtil.getHeaderElements(request, "Accept");
+		for (HeaderElement headerElement : acceptElements) {
+			String mimeType = headerElement.getValue();
+			Optional<FF> formatForMIMEType = serviceRegistry.getFileFormatForMIMEType(mimeType);
+			if (formatForMIMEType.isEmpty()) {
+				continue;
+			}
+			Optional<S> theFactoryForMimeType = serviceRegistry.get(formatForMIMEType.get()); // We take a reference
+			// to the factory
+			// only
+			if (theFactoryForMimeType.isEmpty()) {
+				continue;
+			}
+			if (theFactoryForMimeType.get().getClass().equals(factory.getClass())) {
+				if (headerElement.getParameter(Protocol.VERSION_MEDIA_TYPE_PARAM) != null) {
+					try {
+						return VersionLabel
+								.fromLabel(
+										headerElement.getParameter(Protocol.VERSION_MEDIA_TYPE_PARAM).getValue());
+					} catch (IllegalArgumentException e) {
+						// ignore unknown version or TODO: throw a client error to the user, but it's too harsh.
+					}
+				}
+			}
+		}
+		return null;
+	}
+
+	public static VersionLabel getContentRDFVersion(HttpServletRequest request) {
+		String versionParam = null;
+		if (request.getMethod().equals("GET")) {
+			versionParam = request.getParameter(Protocol.VERSION_MEDIA_TYPE_PARAM);
+		} else if (request.getMethod().equals("POST")) {
+			String contentType = request.getContentType();
+			if (contentType == null) {
+				return null;
+			}
+			HeaderElement contentElement = HeaderElement.parse(contentType);
+
+			if (contentElement.getValue().equals(Protocol.FORM_MIME_TYPE)) {
+				versionParam = request.getParameter(Protocol.VERSION_MEDIA_TYPE_PARAM);
+			} else {
+				Parameter version = contentElement.getParameter(Protocol.VERSION_MEDIA_TYPE_PARAM);
+				if (version == null) {
+					return null;
+				}
+				versionParam = version.getValue();
+			}
+		}
+
+		if (versionParam != null) {
+			try {
+				return VersionLabel.fromLabel(versionParam);
+			} catch (IllegalArgumentException e) {
+				// ignore unknown version or TODO: throw a client error to the user, but that's too harsh, better
+				// ignore?
+			}
+		}
+		return null;
 	}
 
 	/**

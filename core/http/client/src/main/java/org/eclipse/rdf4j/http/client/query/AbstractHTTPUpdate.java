@@ -13,10 +13,8 @@ package org.eclipse.rdf4j.http.client.query;
 import java.util.Iterator;
 
 import org.eclipse.rdf4j.http.client.SPARQLProtocolSession;
-import org.eclipse.rdf4j.query.Binding;
-import org.eclipse.rdf4j.query.BindingSet;
-import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.Update;
+import org.eclipse.rdf4j.model.util.VersionLabel;
+import org.eclipse.rdf4j.query.*;
 import org.eclipse.rdf4j.query.impl.AbstractUpdate;
 
 /**
@@ -24,7 +22,7 @@ import org.eclipse.rdf4j.query.impl.AbstractUpdate;
  *
  * @author Andreas Schwarte
  */
-public abstract class AbstractHTTPUpdate extends AbstractUpdate {
+public abstract class AbstractHTTPUpdate extends AbstractUpdate implements RDFVersionAware {
 
 	private final SPARQLProtocolSession httpClient;
 
@@ -34,12 +32,25 @@ public abstract class AbstractHTTPUpdate extends AbstractUpdate {
 
 	protected final String baseURI;
 
+	protected VersionLabel qlVersion;
+
 	protected AbstractHTTPUpdate(SPARQLProtocolSession httpClient, QueryLanguage queryLanguage, String queryString,
 			String baseURI) {
 		super();
 		this.httpClient = httpClient;
 		this.queryLanguage = queryLanguage;
 		this.queryString = queryString;
+		this.baseURI = baseURI;
+	}
+
+	protected AbstractHTTPUpdate(SPARQLProtocolSession httpClient, QueryLanguage queryLanguage, VersionLabel qlVersion,
+			String queryString,
+			String baseURI) {
+		super();
+		this.httpClient = httpClient;
+		this.queryLanguage = queryLanguage;
+		this.queryString = queryString;
+		this.qlVersion = qlVersion;
 		this.baseURI = baseURI;
 	}
 
@@ -87,5 +98,15 @@ public abstract class AbstractHTTPUpdate extends AbstractUpdate {
 	@Override
 	public String toString() {
 		return queryString;
+	}
+
+	@Override
+	public VersionLabel getQLVersion() {
+		return this.qlVersion;
+	}
+
+	@Override
+	public void setQLVersion(VersionLabel qlVersion) {
+		this.qlVersion = qlVersion;
 	}
 }

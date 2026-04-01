@@ -15,10 +15,8 @@ import java.io.IOException;
 import org.eclipse.rdf4j.http.client.SPARQLProtocolSession;
 import org.eclipse.rdf4j.http.client.query.AbstractHTTPUpdate;
 import org.eclipse.rdf4j.http.protocol.UnauthorizedException;
-import org.eclipse.rdf4j.query.MalformedQueryException;
-import org.eclipse.rdf4j.query.QueryInterruptedException;
-import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.UpdateExecutionException;
+import org.eclipse.rdf4j.model.util.VersionLabel;
+import org.eclipse.rdf4j.query.*;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.eclipse.rdf4j.repository.sparql.SPARQLRepository;
 
@@ -34,6 +32,11 @@ public class SPARQLUpdate extends AbstractHTTPUpdate {
 		super(httpClient, QueryLanguage.SPARQL, queryString, baseURI);
 	}
 
+	public SPARQLUpdate(SPARQLProtocolSession httpClient, String baseURI, String queryString,
+			VersionLabel sparqlVersion) {
+		super(httpClient, QueryLanguage.SPARQL, sparqlVersion, queryString, baseURI);
+	}
+
 	@Override
 	public void execute() throws UpdateExecutionException {
 
@@ -41,7 +44,8 @@ public class SPARQLUpdate extends AbstractHTTPUpdate {
 			// execute update immediately
 			SPARQLProtocolSession client = getHttpClient();
 			try {
-				client.sendUpdate(getQueryLanguage(), getQueryString(), getBaseURI(), dataset, includeInferred,
+				client.sendUpdate(getQueryLanguage(), getQLVersion(), getQueryString(), getBaseURI(), dataset,
+						includeInferred,
 						getMaxExecutionTime(), getBindingsArray());
 			} catch (UnauthorizedException | QueryInterruptedException | MalformedQueryException | IOException e) {
 				throw new UpdateExecutionException(e.getMessage(), e);

@@ -29,6 +29,7 @@ import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.impl.TreeModel;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.BooleanQuery;
 import org.eclipse.rdf4j.query.GraphQuery;
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -127,6 +128,13 @@ public class RepositoryConfigRepository extends AbstractRepository {
 			}
 
 			@Override
+			public RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj,
+					boolean includeInferred, VersionLabel qlVersion,
+					Resource... contexts) throws RepositoryException {
+				throw unsupported();
+			}
+
+			@Override
 			public void exportStatements(Resource subj, IRI pred, Value obj, boolean includeInferred,
 					RDFHandler handler, Resource... contexts) throws RepositoryException, RDFHandlerException {
 				Model model = committed.filter(subj, pred, obj, contexts);
@@ -138,6 +146,13 @@ public class RepositoryConfigRepository extends AbstractRepository {
 					handler.handleStatement(st);
 				});
 				handler.endRDF();
+			}
+
+			@Override
+			public void exportStatements(Resource subj, IRI pred, Value obj, boolean includeInferred,
+					RDFHandler handler, VersionLabel qlVersion, Resource... contexts)
+					throws RepositoryException, RDFHandlerException {
+				throw unsupported();
 			}
 
 			@Override
@@ -250,7 +265,19 @@ public class RepositoryConfigRepository extends AbstractRepository {
 			}
 
 			@Override
+			public Query prepareQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+					throws RepositoryException, MalformedQueryException {
+				throw unsupported();
+			}
+
+			@Override
 			public TupleQuery prepareTupleQuery(QueryLanguage ql, String query, String baseURI)
+					throws RepositoryException, MalformedQueryException {
+				throw unsupported();
+			}
+
+			@Override
+			public TupleQuery prepareTupleQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
 					throws RepositoryException, MalformedQueryException {
 				throw unsupported();
 			}
@@ -262,13 +289,32 @@ public class RepositoryConfigRepository extends AbstractRepository {
 			}
 
 			@Override
+			public GraphQuery prepareGraphQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+					throws RepositoryException, MalformedQueryException {
+				throw unsupported();
+			}
+
+			@Override
 			public BooleanQuery prepareBooleanQuery(QueryLanguage ql, String query, String baseURI)
 					throws RepositoryException, MalformedQueryException {
 				throw unsupported();
 			}
 
 			@Override
+			public BooleanQuery prepareBooleanQuery(QueryLanguage ql, VersionLabel qlVersion, String query,
+					String baseURI)
+					throws RepositoryException, MalformedQueryException {
+				throw unsupported();
+			}
+
+			@Override
 			public Update prepareUpdate(QueryLanguage ql, String update, String baseURI)
+					throws RepositoryException, MalformedQueryException {
+				throw unsupported();
+			}
+
+			@Override
+			public Update prepareUpdate(QueryLanguage ql, VersionLabel qlVersion, String update, String baseURI)
 					throws RepositoryException, MalformedQueryException {
 				throw unsupported();
 			}

@@ -19,6 +19,7 @@ import java.io.OutputStream;
 import java.util.Map;
 import java.util.regex.Pattern;
 
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.QueryInterruptedException;
 import org.eclipse.rdf4j.query.QueryResults;
@@ -28,6 +29,7 @@ import org.eclipse.rdf4j.query.resultio.BasicQueryWriterSettings;
 import org.eclipse.rdf4j.query.resultio.TupleQueryResultFormat;
 import org.eclipse.rdf4j.query.resultio.TupleQueryResultWriter;
 import org.eclipse.rdf4j.query.resultio.TupleQueryResultWriterFactory;
+import org.eclipse.rdf4j.rio.helpers.RDFVersionSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,10 +69,13 @@ public class TupleQueryResultView extends QueryResultView {
 	protected void renderInternal(Map model, HttpServletRequest request, HttpServletResponse response)
 			throws IOException {
 		TupleQueryResultWriterFactory qrWriterFactory = (TupleQueryResultWriterFactory) model.get(FACTORY_KEY);
+		VersionLabel preferredRDFVersion = (VersionLabel) model.get(PREFERRED_OUTPUT_RDF_VERSION);
 		TupleQueryResultFormat qrFormat = qrWriterFactory.getTupleQueryResultFormat();
 
 		response.setStatus(SC_OK);
-		setContentType(response, qrFormat);
+		// TODO: Use this or change the version, depending on what approach we decide on: ignore the
+		// version/always return 1.2 or do indeed follow the user's requirements.
+		setContentType(response, qrFormat, null);
 		setContentDisposition(model, response, qrFormat);
 
 		final Boolean headersOnly = (Boolean) model.get(HEADERS_ONLY);
@@ -79,6 +84,8 @@ public class TupleQueryResultView extends QueryResultView {
 				// ensure we handle exceptions _before_ closing the stream
 				try {
 					TupleQueryResultWriter qrWriter = qrWriterFactory.getWriter(out);
+					qrWriter.getWriterConfig()
+							.set(RDFVersionSettings.PREFERRED_OUTPUT_RDF_VERSION, preferredRDFVersion);
 					TupleQueryResult tupleQueryResult = (TupleQueryResult) model.get(QUERY_RESULT_KEY);
 
 					if (qrWriter.getSupportedSettings().contains(BasicQueryWriterSettings.JSONP_CALLBACK)) {

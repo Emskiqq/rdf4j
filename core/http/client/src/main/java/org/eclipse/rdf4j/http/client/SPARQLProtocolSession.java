@@ -11,6 +11,7 @@
 package org.eclipse.rdf4j.http.client;
 
 import static org.eclipse.rdf4j.http.protocol.Protocol.ACCEPT_PARAM_NAME;
+import static org.eclipse.rdf4j.http.protocol.Protocol.VERSION_MEDIA_TYPE_PARAM;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -31,6 +32,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.ExecutorService;
+import java.util.stream.Collectors;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
@@ -77,6 +79,7 @@ import org.eclipse.rdf4j.http.protocol.error.ErrorType;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.Binding;
 import org.eclipse.rdf4j.query.Dataset;
 import org.eclipse.rdf4j.query.GraphQueryResult;
@@ -112,6 +115,7 @@ import org.eclipse.rdf4j.rio.Rio;
 import org.eclipse.rdf4j.rio.UnsupportedRDFormatException;
 import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
 import org.eclipse.rdf4j.rio.helpers.ParseErrorLogger;
+import org.eclipse.rdf4j.rio.helpers.RDFVersionSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -160,6 +164,9 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	 * The threshold for URL length, beyond which we use the POST method. A threshold of 0 (or a negative value) means
 	 * that the POST method is used for <strong>every</strong> SPARQL query request.
 	 */
+
+	private static final String RDF_VERSIONS_MISMATCH_LOG_MESSAGE = "Mismatch between requested RDF version and returned RDF version: {} != {}";
+
 	private final int maximumUrlLength;
 
 	final static Logger logger = LoggerFactory.getLogger(SPARQLProtocolSession.class);
@@ -360,10 +367,11 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	 */
 	@Deprecated(since = "4.1.2")
 	public TupleQueryResult sendTupleQuery(QueryLanguage ql, String query, Dataset dataset, boolean includeInferred,
-			WeakReference<?> callerRef,
+			WeakReference<?> callerRef, VersionLabel sparqlQuery, VersionLabel preferredRDFVersion,
 			Binding... bindings) throws IOException, RepositoryException, MalformedQueryException,
 			UnauthorizedException, QueryInterruptedException {
-		return sendTupleQuery(ql, query, null, dataset, includeInferred, 0, callerRef, bindings);
+		return sendTupleQuery(ql, query, null, dataset, includeInferred, 0, callerRef, sparqlQuery, preferredRDFVersion,
+				bindings);
 	}
 
 	/**
@@ -371,31 +379,39 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	 */
 	@Deprecated(since = "4.1.2")
 	public TupleQueryResult sendTupleQuery(QueryLanguage ql, String query, String baseURI, Dataset dataset,
-			boolean includeInferred, int maxQueryTime, WeakReference<?> callerRef, Binding... bindings)
+			boolean includeInferred, int maxQueryTime, WeakReference<?> callerRef, VersionLabel qlVersion,
+			VersionLabel preferredRDFVersion,
+			Binding... bindings)
 			throws IOException, RepositoryException,
 			MalformedQueryException, UnauthorizedException, QueryInterruptedException {
-		HttpUriRequest method = getQueryMethod(ql, query, baseURI, dataset, includeInferred, maxQueryTime, bindings);
-		return getBackgroundTupleQueryResult(method, callerRef);
+		HttpUriRequest method = getQueryMethod(ql, qlVersion, query, baseURI, dataset, includeInferred, maxQueryTime,
+				bindings);
+		return getBackgroundTupleQueryResult(method, callerRef, preferredRDFVersion);
 	}
 
 	public void sendTupleQuery(QueryLanguage ql, String query, String baseURI, Dataset dataset, boolean includeInferred,
-			int maxQueryTime, TupleQueryResultHandler handler, Binding... bindings)
+			int maxQueryTime, TupleQueryResultHandler handler, VersionLabel sparqlQuery,
+			VersionLabel preferredRDFVersion, Binding... bindings)
 			throws IOException, TupleQueryResultHandlerException, RepositoryException, MalformedQueryException,
 			UnauthorizedException, QueryInterruptedException {
-		HttpUriRequest method = getQueryMethod(ql, query, baseURI, dataset, includeInferred, maxQueryTime, bindings);
-		getTupleQueryResult(method, handler);
+		HttpUriRequest method = getQueryMethod(ql, sparqlQuery, query, baseURI, dataset, includeInferred, maxQueryTime,
+				bindings);
+		getTupleQueryResult(method, handler, preferredRDFVersion);
 	}
 
-	public void sendUpdate(QueryLanguage ql, String update, String baseURI, Dataset dataset, boolean includeInferred,
+	public void sendUpdate(QueryLanguage ql, VersionLabel qlVersion, String update, String baseURI, Dataset dataset,
+			boolean includeInferred,
 			Binding... bindings) throws IOException, RepositoryException, MalformedQueryException,
 			UnauthorizedException, QueryInterruptedException {
-		sendUpdate(ql, update, baseURI, dataset, includeInferred, 0, bindings);
+		sendUpdate(ql, qlVersion, update, baseURI, dataset, includeInferred, 0, bindings);
 	}
 
-	public void sendUpdate(QueryLanguage ql, String update, String baseURI, Dataset dataset, boolean includeInferred,
+	public void sendUpdate(QueryLanguage ql, VersionLabel qlVersion, String update, String baseURI, Dataset dataset,
+			boolean includeInferred,
 			int maxQueryTime, Binding... bindings) throws IOException, RepositoryException, MalformedQueryException,
 			UnauthorizedException, QueryInterruptedException {
-		HttpUriRequest method = getUpdateMethod(ql, update, baseURI, dataset, includeInferred, maxQueryTime, bindings);
+		HttpUriRequest method = getUpdateMethod(ql, qlVersion, update, baseURI, dataset, includeInferred, maxQueryTime,
+				bindings);
 
 		try {
 			executeNoContent(method);
@@ -411,10 +427,11 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	 */
 	@Deprecated(since = "4.1.2")
 	public GraphQueryResult sendGraphQuery(QueryLanguage ql, String query, Dataset dataset, boolean includeInferred,
-			WeakReference<?> callerRef,
+			WeakReference<?> callerRef, VersionLabel sparqlVersion, VersionLabel preferredRDFVersion,
 			Binding... bindings) throws IOException, RepositoryException, MalformedQueryException,
 			UnauthorizedException, QueryInterruptedException {
-		return sendGraphQuery(ql, query, null, dataset, includeInferred, 0, callerRef, bindings);
+		return sendGraphQuery(ql, query, null, dataset, includeInferred, 0, callerRef, sparqlVersion,
+				preferredRDFVersion, bindings);
 	}
 
 	/**
@@ -422,13 +439,16 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	 */
 	@Deprecated(since = "4.1.2")
 	public GraphQueryResult sendGraphQuery(QueryLanguage ql, String query, String baseURI, Dataset dataset,
-			boolean includeInferred, int maxQueryTime, WeakReference<?> callerRef, Binding... bindings)
+			boolean includeInferred, int maxQueryTime, WeakReference<?> callerRef, VersionLabel qlVersion,
+			VersionLabel preferredRDFVersion,
+			Binding... bindings)
 			throws IOException, RepositoryException,
 			MalformedQueryException, UnauthorizedException, QueryInterruptedException {
 		try {
-			HttpUriRequest method = getQueryMethod(ql, query, baseURI, dataset, includeInferred, maxQueryTime,
+			HttpUriRequest method = getQueryMethod(ql, qlVersion, query, baseURI, dataset, includeInferred,
+					maxQueryTime,
 					bindings);
-			return getRDFBackground(method, false, callerRef);
+			return getRDFBackground(method, false, callerRef, preferredRDFVersion);
 		} catch (RDFHandlerException e) {
 			// Found a bug in TupleQueryResultBuilder?
 			throw new RepositoryException(e);
@@ -436,30 +456,40 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	}
 
 	public void sendGraphQuery(QueryLanguage ql, String query, Dataset dataset, boolean includeInferred,
-			RDFHandler handler, Binding... bindings) throws IOException, RDFHandlerException, RepositoryException,
+			RDFHandler handler, VersionLabel sparqlVersion, VersionLabel preferredRDFVersion, Binding... bindings)
+			throws IOException, RDFHandlerException, RepositoryException,
 			MalformedQueryException, UnauthorizedException, QueryInterruptedException {
-		sendGraphQuery(ql, query, null, dataset, includeInferred, 0, handler, bindings);
+		sendGraphQuery(ql, query, null, dataset, includeInferred, 0, handler, sparqlVersion, preferredRDFVersion,
+				bindings);
 	}
 
 	public void sendGraphQuery(QueryLanguage ql, String query, String baseURI, Dataset dataset, boolean includeInferred,
-			int maxQueryTime, RDFHandler handler, Binding... bindings) throws IOException, RDFHandlerException,
+			int maxQueryTime, RDFHandler handler, VersionLabel qlVersion, VersionLabel preferredRDFVersion,
+			Binding... bindings)
+			throws IOException, RDFHandlerException,
 			RepositoryException, MalformedQueryException, UnauthorizedException, QueryInterruptedException {
-		HttpUriRequest method = getQueryMethod(ql, query, baseURI, dataset, includeInferred, maxQueryTime, bindings);
-		getRDF(method, handler, false);
+		HttpUriRequest method = getQueryMethod(ql, qlVersion, query, baseURI, dataset, includeInferred,
+				maxQueryTime, bindings);
+		getRDF(method, handler, false, preferredRDFVersion);
 	}
 
 	public boolean sendBooleanQuery(QueryLanguage ql, String query, Dataset dataset, boolean includeInferred,
+			VersionLabel sparqlVersion, VersionLabel preferredRDFVersion,
 			Binding... bindings) throws IOException, RepositoryException, MalformedQueryException,
 			UnauthorizedException, QueryInterruptedException {
-		return sendBooleanQuery(ql, query, null, dataset, includeInferred, 0, bindings);
+		return sendBooleanQuery(ql, query, null, dataset, includeInferred, 0, sparqlVersion, preferredRDFVersion,
+				bindings);
 	}
 
 	public boolean sendBooleanQuery(QueryLanguage ql, String query, String baseURI, Dataset dataset,
-			boolean includeInferred, int maxQueryTime, Binding... bindings) throws IOException, RepositoryException,
+			boolean includeInferred, int maxQueryTime, VersionLabel qlVersion, VersionLabel preferredRDFVersion,
+			Binding... bindings)
+			throws IOException, RepositoryException,
 			MalformedQueryException, UnauthorizedException, QueryInterruptedException {
-		HttpUriRequest method = getQueryMethod(ql, query, baseURI, dataset, includeInferred, maxQueryTime, bindings);
+		HttpUriRequest method = getQueryMethod(ql, qlVersion, query, baseURI, dataset, includeInferred,
+				maxQueryTime, bindings);
 		try {
-			return getBoolean(method);
+			return getBoolean(method, preferredRDFVersion);
 		} catch (RepositoryException | MalformedQueryException | QueryInterruptedException e) {
 			throw e;
 		} catch (RDF4JException e) {
@@ -490,12 +520,14 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 		}
 	}
 
-	protected HttpUriRequest getQueryMethod(QueryLanguage ql, String query, String baseURI, Dataset dataset,
+	protected HttpUriRequest getQueryMethod(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI,
+			Dataset dataset,
 			boolean includeInferred, int maxQueryTime, Binding... bindings) {
-		List<NameValuePair> queryParams = getQueryMethodParameters(ql, query, baseURI, dataset, includeInferred,
-				maxQueryTime, bindings);
 		HttpUriRequest method;
 		String queryUrlWithParams;
+		List<NameValuePair> queryParams = getQueryMethodParameters(ql, qlVersion, query, baseURI, dataset,
+				includeInferred,
+				maxQueryTime, bindings);
 		try {
 			URIBuilder urib = new URIBuilder(getQueryURL());
 			for (NameValuePair nvp : queryParams) {
@@ -514,6 +546,7 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 			postMethod.setEntity(new UrlEncodedFormEntity(queryParams, UTF8));
 			method = postMethod;
 		} else {
+			// build again, skipping the version
 			method = new HttpGet(queryUrlWithParams);
 		}
 		// functionality to provide custom http headers as required by the
@@ -533,18 +566,21 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 		return fullQueryUrl.length() > maximumUrlLength;
 	}
 
-	protected HttpUriRequest getUpdateMethod(QueryLanguage ql, String update, String baseURI, Dataset dataset,
+	protected HttpUriRequest getUpdateMethod(QueryLanguage ql, VersionLabel qlVersion, String update, String baseURI,
+			Dataset dataset,
 			boolean includeInferred, Binding... bindings) {
-		return getUpdateMethod(ql, update, baseURI, dataset, includeInferred, 0, bindings);
+		return getUpdateMethod(ql, qlVersion, update, baseURI, dataset, includeInferred, 0, bindings);
 	}
 
-	protected HttpUriRequest getUpdateMethod(QueryLanguage ql, String update, String baseURI, Dataset dataset,
+	protected HttpUriRequest getUpdateMethod(QueryLanguage ql, VersionLabel qlVersion, String update, String baseURI,
+			Dataset dataset,
 			boolean includeInferred, int maxQueryTime, Binding... bindings) {
 		HttpPost method = new HttpPost(getUpdateURL());
 
 		method.setHeader("Content-Type", Protocol.FORM_MIME_TYPE + "; charset=utf-8");
 
-		List<NameValuePair> queryParams = getUpdateMethodParameters(ql, update, baseURI, dataset, includeInferred,
+		List<NameValuePair> queryParams = getUpdateMethodParameters(ql, qlVersion, update, baseURI, dataset,
+				includeInferred,
 				maxQueryTime, bindings);
 
 		method.setEntity(new UrlEncodedFormEntity(queryParams, UTF8));
@@ -558,7 +594,8 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 		return method;
 	}
 
-	protected List<NameValuePair> getQueryMethodParameters(QueryLanguage ql, String query, String baseURI,
+	protected List<NameValuePair> getQueryMethodParameters(QueryLanguage ql, VersionLabel qlVersion, String query,
+			String baseURI,
 			Dataset dataset, boolean includeInferred, int maxQueryTime, Binding... bindings) {
 		List<NameValuePair> queryParams = new ArrayList<>();
 
@@ -584,15 +621,21 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 			}
 		}
 
+		if (qlVersion != null) {
+			queryParams.add(new BasicNameValuePair(VERSION_MEDIA_TYPE_PARAM, qlVersion.getValue()));
+		}
+
 		return queryParams;
 	}
 
-	protected List<NameValuePair> getUpdateMethodParameters(QueryLanguage ql, String update, String baseURI,
+	protected List<NameValuePair> getUpdateMethodParameters(QueryLanguage ql, VersionLabel qlVersion, String update,
+			String baseURI,
 			Dataset dataset, boolean includeInferred, Binding... bindings) {
-		return getUpdateMethodParameters(ql, update, baseURI, dataset, includeInferred, 0, bindings);
+		return getUpdateMethodParameters(ql, qlVersion, update, baseURI, dataset, includeInferred, 0, bindings);
 	}
 
-	protected List<NameValuePair> getUpdateMethodParameters(QueryLanguage ql, String update, String baseURI,
+	protected List<NameValuePair> getUpdateMethodParameters(QueryLanguage ql, VersionLabel qlVersion, String update,
+			String baseURI,
 			Dataset dataset, boolean includeInferred, int maxQueryTime, Binding... bindings) {
 
 		List<NameValuePair> queryParams = new ArrayList<>();
@@ -638,6 +681,10 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 						String.valueOf(dataset.getDefaultInsertGraph())));
 			}
 
+			if (qlVersion != null) {
+				queryParams.add(new BasicNameValuePair(VERSION_MEDIA_TYPE_PARAM, String.valueOf(qlVersion)));
+			}
+
 			for (IRI defaultGraphURI : dataset.getDefaultGraphs()) {
 				queryParams
 						.add(new BasicNameValuePair(Protocol.USING_GRAPH_PARAM_NAME, String.valueOf(defaultGraphURI)));
@@ -662,7 +709,8 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	 * @deprecated WeakReference<?> callerRef argument will be removed
 	 */
 	@Deprecated(since = "4.1.2")
-	protected TupleQueryResult getBackgroundTupleQueryResult(HttpUriRequest method, WeakReference<?> callerRef)
+	protected TupleQueryResult getBackgroundTupleQueryResult(HttpUriRequest method, WeakReference<?> callerRef,
+			VersionLabel preferredRDFVersion)
 			throws RepositoryException, QueryInterruptedException, MalformedQueryException, IOException {
 
 		boolean submitted = false;
@@ -675,7 +723,7 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 
 		TupleQueryResult tRes;
 		// send the tuple query
-		HttpResponse response = sendTupleQueryViaHttp(method, tqrFormats);
+		HttpResponse response = sendTupleQueryViaHttp(method, tqrFormats, preferredRDFVersion);
 		try {
 
 			// if we get here, HTTP code is 200
@@ -684,6 +732,17 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 					.orElseThrow(() -> new RepositoryException(
 							"Server responded with an unsupported file format: " + mimeType));
 			TupleQueryResultParser parser = QueryResultIO.createTupleParser(format, getValueFactory());
+
+			VersionLabel responseRDFVersion = getResponseRDFVersion(response);
+			if (responseRDFVersion != null) {
+				if (preferredRDFVersion != null && responseRDFVersion != preferredRDFVersion) {
+					logger.info(RDF_VERSIONS_MISMATCH_LOG_MESSAGE,
+							preferredRDFVersion, responseRDFVersion);
+				}
+				parser.getParserConfig().set(RDFVersionSettings.INPUT_RDF_VERSION, responseRDFVersion);
+				// TODO: think how to handle from there, depending on what we decide for the approach with versions
+			}
+
 			tRes = background.parse(parser, response.getEntity().getContent(), callerRef);
 			submitted = true;
 			return tRes;
@@ -698,7 +757,8 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	 * Parse the response in this thread using the provided {@link TupleQueryResultHandler}. All HTTP connections are
 	 * closed and released in this method
 	 */
-	protected void getTupleQueryResult(HttpUriRequest method, TupleQueryResultHandler handler)
+	protected void getTupleQueryResult(HttpUriRequest method, TupleQueryResultHandler handler,
+			VersionLabel preferredRDFVersion)
 			throws IOException, TupleQueryResultHandlerException, RepositoryException, MalformedQueryException,
 			UnauthorizedException, QueryInterruptedException {
 		// Specify which formats we support
@@ -708,7 +768,7 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 		}
 
 		// send the tuple query
-		HttpResponse response = sendTupleQueryViaHttp(method, tqrFormats);
+		HttpResponse response = sendTupleQueryViaHttp(method, tqrFormats, preferredRDFVersion);
 		try {
 
 			// if we get here, HTTP code is 200
@@ -726,6 +786,16 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 				// we need to parse the result and re-serialize.
 				TupleQueryResultParser parser = QueryResultIO.createTupleParser(format, getValueFactory());
 				parser.setQueryResultHandler(handler);
+
+				VersionLabel responseRDFVersion = getResponseRDFVersion(response);
+				if (responseRDFVersion != null) {
+					if (preferredRDFVersion != null && responseRDFVersion != preferredRDFVersion) {
+						logger.info(RDF_VERSIONS_MISMATCH_LOG_MESSAGE, preferredRDFVersion, responseRDFVersion);
+					}
+					parser.getParserConfig().set(RDFVersionSettings.INPUT_RDF_VERSION, responseRDFVersion);
+					// TODO: think how to handle from there, depending on what we decide for the approach with versions
+				}
+
 				parser.parseQueryResult(response.getEntity().getContent());
 			} catch (QueryResultParseException e) {
 				throw new RepositoryException("Malformed query result from server", e);
@@ -753,7 +823,8 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	 * @throws QueryInterruptedException
 	 * @throws MalformedQueryException
 	 */
-	private HttpResponse sendTupleQueryViaHttp(HttpUriRequest method, Set<QueryResultFormat> tqrFormats)
+	private HttpResponse sendTupleQueryViaHttp(HttpUriRequest method, Set<QueryResultFormat> tqrFormats,
+			VersionLabel preferredRDFVersion)
 			throws RepositoryException, IOException, QueryInterruptedException, MalformedQueryException {
 
 		final List<String> acceptValues = new ArrayList<>(tqrFormats.size());
@@ -768,7 +839,7 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 			}
 
 			for (String mimeType : format.getMIMETypes()) {
-				String acceptParam = mimeType;
+				String acceptParam = appendVersionMediaTypeParameter(mimeType, preferredRDFVersion);
 
 				if (qValue < 10) {
 					acceptParam += ";q=0." + qValue;
@@ -789,6 +860,20 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	}
 
 	/**
+	 * Helper method to append the version media type parameter.
+	 *
+	 * @param mediaType    - the original media type
+	 * @param versionLabel - the requested version, or null
+	 * @return the media type with the version parameter appended, or the original media type if versionLabel is null
+	 */
+	private String appendVersionMediaTypeParameter(String mediaType, VersionLabel versionLabel) {
+		if (versionLabel == null) {
+			return mediaType;
+		}
+		return mediaType + ";" + VERSION_MEDIA_TYPE_PARAM + "=" + versionLabel;
+	}
+
+	/**
 	 * Parse the response in a background thread. HTTP connections are dealt with in the {@link BackgroundGraphResult}
 	 * or (in the error-case) in this method.
 	 *
@@ -796,7 +881,7 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	 */
 	@Deprecated(since = "4.1.2")
 	protected GraphQueryResult getRDFBackground(HttpUriRequest method, boolean requireContext,
-			WeakReference<?> callerRef)
+			WeakReference<?> callerRef, VersionLabel preferredRDFVersion)
 			throws IOException, RDFHandlerException, RepositoryException, MalformedQueryException,
 			UnauthorizedException, QueryInterruptedException {
 
@@ -810,7 +895,7 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 
 		GraphQueryResult gRes;
 		// send the tuple query
-		HttpResponse response = sendGraphQueryViaHttp(method, requireContext, rdfFormats);
+		HttpResponse response = sendGraphQueryViaHttp(method, requireContext, rdfFormats, preferredRDFVersion);
 		try {
 
 			// if we get here, HTTP code is 200
@@ -821,6 +906,15 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 			RDFParser parser = Rio.createParser(format, getValueFactory());
 			parser.setParserConfig(getParserConfig());
 			parser.setParseErrorListener(new ParseErrorLogger());
+
+			VersionLabel responseRDFVersion = getResponseRDFVersion(response);
+			if (responseRDFVersion != null) {
+				if (preferredRDFVersion != null && responseRDFVersion != preferredRDFVersion) {
+					logger.info(RDF_VERSIONS_MISMATCH_LOG_MESSAGE, preferredRDFVersion, responseRDFVersion);
+				}
+				parser.getParserConfig().set(RDFVersionSettings.INPUT_RDF_VERSION, responseRDFVersion);
+				// TODO: think how to handle from there, depending on what we decide for the approach with versions
+			}
 
 			Charset charset = null;
 
@@ -864,7 +958,8 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	 * Parse the response in this thread using the provided {@link RDFHandler}. All HTTP connections are closed and
 	 * released in this method
 	 */
-	protected void getRDF(HttpUriRequest method, RDFHandler handler, boolean requireContext)
+	protected void getRDF(HttpUriRequest method, RDFHandler handler, boolean requireContext,
+			VersionLabel preferredRDFVersion)
 			throws IOException, RDFHandlerException, RepositoryException, MalformedQueryException,
 			UnauthorizedException, QueryInterruptedException {
 		// Specify which formats we support using Accept headers
@@ -874,7 +969,7 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 		}
 
 		// send the tuple query
-		HttpResponse response = sendGraphQueryViaHttp(method, requireContext, rdfFormats);
+		HttpResponse response = sendGraphQueryViaHttp(method, requireContext, rdfFormats, preferredRDFVersion);
 		try {
 
 			String mimeType = getResponseMIMEType(response);
@@ -892,7 +987,18 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 				RDFParser parser = Rio.createParser(format, getValueFactory());
 				parser.setParserConfig(getParserConfig());
 				parser.setParseErrorListener(new ParseErrorLogger());
+
 				parser.setRDFHandler(handler);
+
+				VersionLabel responseRDFVersion = getResponseRDFVersion(response);
+				if (responseRDFVersion != null) {
+					if (preferredRDFVersion != null && responseRDFVersion != preferredRDFVersion) {
+						logger.info(RDF_VERSIONS_MISMATCH_LOG_MESSAGE, preferredRDFVersion, responseRDFVersion);
+					}
+					parser.getParserConfig().set(RDFVersionSettings.INPUT_RDF_VERSION, responseRDFVersion);
+					// TODO: think how to handle from there, depending on what we decide for the approach with versions
+				}
+
 				parser.parse(response.getEntity().getContent(), method.getURI().toASCIIString());
 			} catch (RDFParseException e) {
 				throw new RepositoryException("Malformed query result from server", e);
@@ -935,13 +1041,17 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 		return false;
 	}
 
-	private HttpResponse sendGraphQueryViaHttp(HttpUriRequest method, boolean requireContext, Set<RDFFormat> rdfFormats)
+	private HttpResponse sendGraphQueryViaHttp(HttpUriRequest method, boolean requireContext, Set<RDFFormat> rdfFormats,
+			VersionLabel preferredRDFVersion)
 			throws RepositoryException, IOException, QueryInterruptedException, MalformedQueryException {
 
 		List<String> acceptParams = RDFFormat.getAcceptParams(rdfFormats, requireContext, getPreferredRDFFormat());
 
-		method.addHeader(ACCEPT_PARAM_NAME, String.join(", ", acceptParams));
+		String acceptHeader = acceptParams.stream()
+				.map(s -> appendVersionMediaTypeParameter(s, preferredRDFVersion))
+				.collect(Collectors.joining(", "));
 
+		method.addHeader(ACCEPT_PARAM_NAME, acceptHeader);
 		try {
 			return executeOK(method);
 		} catch (RepositoryException | MalformedQueryException | QueryInterruptedException e) {
@@ -957,7 +1067,8 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 	 *
 	 * @throws RDF4JException
 	 */
-	protected boolean getBoolean(HttpUriRequest method) throws IOException, RDF4JException {
+	protected boolean getBoolean(HttpUriRequest method, VersionLabel preferredRDFVersion)
+			throws IOException, RDF4JException {
 		// Specify which formats we support using Accept headers
 		Set<QueryResultFormat> booleanFormats = BooleanQueryResultParserRegistry.getInstance().getKeys();
 		if (booleanFormats.isEmpty()) {
@@ -965,7 +1076,7 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 		}
 
 		// send the tuple query
-		HttpResponse response = sendBooleanQueryViaHttp(method, booleanFormats);
+		HttpResponse response = sendBooleanQueryViaHttp(method, booleanFormats, preferredRDFVersion);
 		try {
 
 			// if we get here, HTTP code is 200
@@ -977,6 +1088,16 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 				BooleanQueryResultParser parser = QueryResultIO.createBooleanParser(format);
 				QueryResultCollector results = new QueryResultCollector();
 				parser.setQueryResultHandler(results);
+
+				VersionLabel responseRDFVersion = getResponseRDFVersion(response);
+				if (responseRDFVersion != null) {
+					if (preferredRDFVersion != null && responseRDFVersion != preferredRDFVersion) {
+						logger.info(RDF_VERSIONS_MISMATCH_LOG_MESSAGE, preferredRDFVersion, responseRDFVersion);
+					}
+					parser.getParserConfig().set(RDFVersionSettings.INPUT_RDF_VERSION, responseRDFVersion);
+					// TODO: think how to handle from there, depending on what we decide for the approach with versions
+				}
+
 				parser.parseQueryResult(response.getEntity().getContent());
 				return results.getBoolean();
 			} catch (QueryResultParseException e) {
@@ -988,7 +1109,8 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 
 	}
 
-	private HttpResponse sendBooleanQueryViaHttp(HttpUriRequest method, Set<QueryResultFormat> booleanFormats)
+	private HttpResponse sendBooleanQueryViaHttp(HttpUriRequest method, Set<QueryResultFormat> booleanFormats,
+			VersionLabel preferredRDFVersion)
 			throws IOException, RDF4JException {
 
 		final List<String> acceptValues = new ArrayList<>(booleanFormats.size());
@@ -1003,12 +1125,11 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 			}
 
 			for (String mimeType : format.getMIMETypes()) {
-				String acceptParam = mimeType;
+				String acceptParam = appendVersionMediaTypeParameter(mimeType, preferredRDFVersion);
 
 				if (qValue < 10) {
 					acceptParam += ";q=0." + qValue;
 				}
-
 				acceptValues.add(acceptParam);
 			}
 		}
@@ -1208,6 +1329,36 @@ public class SPARQLProtocolSession implements HttpClientDependent, AutoCloseable
 			}
 		}
 
+		return null;
+	}
+
+	/**
+	 * Gets the version Media Type parameter specified in the response headers of the supplied method, if any. For
+	 * example, if the response headers contain <var>Content-Type:
+	 * application/xml;version=1.2-basic;charset=UTF-8</var>, this method will return
+	 * <var>VersionLabel.RDF_1_2_BASIC</var> as the version label.
+	 *
+	 * @param response The method to get the response version Media Type parameter from.
+	 * @return The response version Media Type parameter value, or <var>null</var> if not available.
+	 */
+	protected VersionLabel getResponseRDFVersion(HttpResponse response) {
+		Header[] headers = response.getHeaders("Content-Type");
+
+		for (Header header : headers) {
+			HeaderElement[] headerElements = header.getElements();
+
+			for (HeaderElement headerEl : headerElements) {
+				if (headerEl.getParameterByName(VERSION_MEDIA_TYPE_PARAM) != null) {
+					try {
+						String versionParam = headerEl.getParameterByName(VERSION_MEDIA_TYPE_PARAM).getValue();
+						logger.debug("response Media Type version parameter is {}", versionParam);
+						return VersionLabel.fromLabel(versionParam);
+					} catch (IllegalArgumentException e) {
+						// TODO: ignore unknown version or throw error to user
+					}
+				}
+			}
+		}
 		return null;
 	}
 

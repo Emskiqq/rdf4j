@@ -42,6 +42,7 @@ import org.eclipse.rdf4j.http.server.repository.resolver.RepositoryResolver;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.BooleanQuery;
 import org.eclipse.rdf4j.query.Dataset;
 import org.eclipse.rdf4j.query.GraphQuery;
@@ -121,6 +122,13 @@ public class DefaultQueryRequestHandler extends AbstractQueryRequestHandler {
 		return QueryResults.limitResults(tqr, limit, offset);
 	}
 
+	protected TupleQueryResult evaluateQuery(TupleQuery query, long limit, long offset, boolean distinct,
+			VersionLabel versionLabel) {
+		query.setPreferredRDFResultsVersion(versionLabel);
+		TupleQueryResult tqr = distinct ? QueryResults.distinctResults(query.evaluate()) : query.evaluate();
+		return QueryResults.limitResults(tqr, limit, offset);
+	}
+
 	@Override
 	protected View getViewFor(Query query) {
 		if (query instanceof TupleQuery) {
@@ -187,9 +195,12 @@ public class DefaultQueryRequestHandler extends AbstractQueryRequestHandler {
 
 		QueryLanguage queryLn = getQueryLanguage(request.getParameter(QUERY_LANGUAGE_PARAM_NAME));
 		String baseIRI = request.getParameter(Protocol.BASEURI_PARAM_NAME);
+		VersionLabel qlVersion = ProtocolUtil.getContentRDFVersion(request);
 
 		try {
-			Query query = repositoryCon.prepareQuery(queryLn, queryString, baseIRI);
+			// This first parses the query, using a parser, configured with the given content version.
+			// Later the request query is also evaluated. Applies to Tuple/Graph/Boolean queries.
+			Query query = repositoryCon.prepareQuery(queryLn, qlVersion, queryString, baseIRI);
 
 			setQueryParameters(request, repositoryCon, query);
 

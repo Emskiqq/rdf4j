@@ -16,12 +16,8 @@ import java.util.concurrent.CopyOnWriteArraySet;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.query.BindingSet;
-import org.eclipse.rdf4j.query.Dataset;
-import org.eclipse.rdf4j.query.MalformedQueryException;
-import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.Update;
-import org.eclipse.rdf4j.query.UpdateExecutionException;
+import org.eclipse.rdf4j.model.util.VersionLabel;
+import org.eclipse.rdf4j.query.*;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
@@ -277,7 +273,6 @@ public class InterceptingRepositoryConnectionWrapper extends RepositoryConnectio
 			throws MalformedQueryException, RepositoryException {
 		if (activated) {
 			return new Update() {
-
 				private final RepositoryConnection conn = getDelegate();
 
 				private final Update delegate = conn.prepareUpdate(ql, update, baseURI);
@@ -296,6 +291,98 @@ public class InterceptingRepositoryConnectionWrapper extends RepositoryConnectio
 					if (!denied) {
 						delegate.execute();
 					}
+				}
+
+				@Override
+				public void setBinding(String name, Value value) {
+					delegate.setBinding(name, value);
+				}
+
+				@Override
+				public void removeBinding(String name) {
+					delegate.removeBinding(name);
+				}
+
+				@Override
+				public void clearBindings() {
+					delegate.clearBindings();
+				}
+
+				@Override
+				public BindingSet getBindings() {
+					return delegate.getBindings();
+				}
+
+				@Override
+				public void setDataset(Dataset dataset) {
+					delegate.setDataset(dataset);
+				}
+
+				@Override
+				public Dataset getDataset() {
+					return delegate.getDataset();
+				}
+
+				@Override
+				public void setIncludeInferred(boolean includeInferred) {
+					delegate.setIncludeInferred(includeInferred);
+				}
+
+				@Override
+				public boolean getIncludeInferred() {
+					return delegate.getIncludeInferred();
+				}
+
+				@Override
+				public void setMaxExecutionTime(int maxExecutionTimeSeconds) {
+					delegate.setMaxExecutionTime(maxExecutionTimeSeconds);
+				}
+
+				@Override
+				public int getMaxExecutionTime() {
+					return delegate.getMaxExecutionTime();
+				}
+			};
+		} else {
+			return getDelegate().prepareUpdate(ql, update, baseURI);
+		}
+	}
+
+	@Override
+	public Update prepareUpdate(final QueryLanguage ql, final VersionLabel qlVersion, final String update,
+			final String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		if (activated) {
+			return new Update() {
+
+				private final RepositoryConnection conn = getDelegate();
+
+				private final Update delegate = conn.prepareUpdate(ql, qlVersion, update, baseURI);
+
+				@Override
+				public void execute() throws UpdateExecutionException {
+					boolean denied = false;
+					if (activated) {
+						for (RepositoryConnectionInterceptor interceptor : interceptors) {
+							denied = interceptor.execute(conn, ql, update, baseURI, delegate);
+							if (denied) {
+								break;
+							}
+						}
+					}
+					if (!denied) {
+						delegate.execute();
+					}
+				}
+
+				@Override
+				public void setQLVersion(VersionLabel qlVersion) {
+					delegate.setQLVersion(qlVersion);
+				}
+
+				@Override
+				public VersionLabel getQLVersion() {
+					return delegate.getQLVersion();
 				}
 
 				@Override

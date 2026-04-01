@@ -24,6 +24,7 @@ import java.util.Set;
 import org.eclipse.rdf4j.model.Namespace;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.util.Namespaces;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.Dataset;
 import org.eclipse.rdf4j.query.IncompatibleOperationException;
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -64,6 +65,7 @@ import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
 @SuppressWarnings("deprecation")
 public class SPARQLParser implements QueryParser {
 	private final Map<String, String> customPrefixes;
+	private VersionLabel qlVersion;
 
 	/**
 	 * Create a new SPARQLParser.
@@ -190,6 +192,13 @@ public class SPARQLParser implements QueryParser {
 	}
 
 	@Override
+	public ParsedUpdate parseUpdate(String updateStr, VersionLabel qlVersion, String baseURI)
+			throws MalformedQueryException {
+		// TODO: Implement however we decide
+		return parseUpdate(updateStr, baseURI);
+	}
+
+	@Override
 	public ParsedQuery parseQuery(String queryStr, String baseURI) throws MalformedQueryException {
 		try {
 			ASTQueryContainer qc = SyntaxTreeBuilder.parseQuery(queryStr);
@@ -238,6 +247,23 @@ public class SPARQLParser implements QueryParser {
 		} catch (ParseException | TokenMgrError e) {
 			throw new MalformedQueryException(e.getMessage(), e);
 		}
+	}
+
+	@Override
+	public ParsedQuery parseQuery(String queryStr, VersionLabel qlVersion, String baseURI)
+			throws MalformedQueryException {
+		// TODO: implement however we decide!
+		return parseQuery(queryStr, baseURI);
+	}
+
+	@Override
+	public void setQLVersion(VersionLabel version) {
+		this.qlVersion = version;
+	}
+
+	@Override
+	public VersionLabel getQLVersion() {
+		return this.qlVersion;
 	}
 
 	private TupleExpr buildQueryModel(Node qc) throws MalformedQueryException {

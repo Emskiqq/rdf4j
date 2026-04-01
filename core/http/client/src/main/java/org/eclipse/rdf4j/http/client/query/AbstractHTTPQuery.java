@@ -13,10 +13,8 @@ package org.eclipse.rdf4j.http.client.query;
 import java.util.Iterator;
 
 import org.eclipse.rdf4j.http.client.SPARQLProtocolSession;
-import org.eclipse.rdf4j.query.Binding;
-import org.eclipse.rdf4j.query.BindingSet;
-import org.eclipse.rdf4j.query.Query;
-import org.eclipse.rdf4j.query.QueryLanguage;
+import org.eclipse.rdf4j.model.util.VersionLabel;
+import org.eclipse.rdf4j.query.*;
 import org.eclipse.rdf4j.query.impl.AbstractQuery;
 
 /**
@@ -24,7 +22,7 @@ import org.eclipse.rdf4j.query.impl.AbstractQuery;
  *
  * @author Andreas Schwarte
  */
-public abstract class AbstractHTTPQuery extends AbstractQuery {
+public abstract class AbstractHTTPQuery extends AbstractQuery implements RDFVersionAware {
 
 	private final SPARQLProtocolSession httpClient;
 
@@ -34,11 +32,30 @@ public abstract class AbstractHTTPQuery extends AbstractQuery {
 
 	protected final String baseURI;
 
+	protected VersionLabel preferredRDFResultsVersion;
+
+	protected VersionLabel qlVersion;
+
 	protected AbstractHTTPQuery(SPARQLProtocolSession httpClient, QueryLanguage queryLanguage, String queryString,
 			String baseURI) {
 		super();
 		this.httpClient = httpClient;
 		this.queryLanguage = queryLanguage;
+		this.queryString = queryString;
+		// TODO think about the following
+		// for legacy reasons we should support the empty string for baseURI
+		// this is used in the SPARQL repository in several places, e.g. in
+		// getStatements
+		this.baseURI = baseURI != null && !baseURI.isEmpty() ? baseURI : null;
+	}
+
+	protected AbstractHTTPQuery(SPARQLProtocolSession httpClient, QueryLanguage queryLanguage, VersionLabel qlVersion,
+			String queryString,
+			String baseURI) {
+		super();
+		this.httpClient = httpClient;
+		this.queryLanguage = queryLanguage;
+		this.qlVersion = qlVersion;
 		this.queryString = queryString;
 		// TODO think about the following
 		// for legacy reasons we should support the empty string for baseURI
@@ -76,5 +93,23 @@ public abstract class AbstractHTTPQuery extends AbstractQuery {
 	@Override
 	public String toString() {
 		return queryString;
+	}
+
+	public VersionLabel getPreferredRDFResultsVersion() {
+		return this.preferredRDFResultsVersion;
+	}
+
+	public void setPreferredRDFResultsVersion(VersionLabel preferredRDFResultsVersion) {
+		this.preferredRDFResultsVersion = preferredRDFResultsVersion;
+	}
+
+	@Override
+	public VersionLabel getQLVersion() {
+		return this.qlVersion;
+	}
+
+	@Override
+	public void setQLVersion(VersionLabel qlVersion) {
+		this.qlVersion = qlVersion;
 	}
 }

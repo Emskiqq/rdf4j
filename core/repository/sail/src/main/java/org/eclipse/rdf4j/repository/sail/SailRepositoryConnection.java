@@ -27,10 +27,8 @@ import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.TripleTerm;
 import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.query.MalformedQueryException;
-import org.eclipse.rdf4j.query.Query;
-import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.Update;
+import org.eclipse.rdf4j.model.util.VersionLabel;
+import org.eclipse.rdf4j.query.*;
 import org.eclipse.rdf4j.query.algebra.TupleExpr;
 import org.eclipse.rdf4j.query.algebra.evaluation.federation.FederatedServiceResolver;
 import org.eclipse.rdf4j.query.algebra.evaluation.federation.FederatedServiceResolverClient;
@@ -61,7 +59,7 @@ import org.eclipse.rdf4j.sail.SailReadOnlyException;
  * @author Arjohn Kampman
  */
 public class SailRepositoryConnection extends AbstractRepositoryConnection implements FederatedServiceResolverClient,
-		RepositoryResolverClient, HttpClientDependent, SessionManagerDependent {
+		RepositoryResolverClient, HttpClientDependent, SessionManagerDependent, RDFVersionAware {
 
 	/*-----------*
 	 * Variables *
@@ -297,6 +295,37 @@ public class SailRepositoryConnection extends AbstractRepositoryConnection imple
 	}
 
 	@Override
+	public SailQuery prepareQuery(QueryLanguage ql, VersionLabel qlVersion, String queryString, String baseURI)
+			throws MalformedQueryException {
+		ParsedQuery parsedQuery = QueryParserUtil.parseQuery(ql, qlVersion, queryString, baseURI);
+
+		if (parsedQuery instanceof ParsedTupleQuery) {
+			Optional<TupleExpr> sailTupleExpr = sailConnection.prepareQuery(ql, Query.QueryType.TUPLE, queryString,
+					baseURI);
+			if (sailTupleExpr.isPresent()) {
+				parsedQuery = new ParsedTupleQuery(queryString, sailTupleExpr.get());
+			}
+			return new SailTupleQuery((ParsedTupleQuery) parsedQuery, this);
+		} else if (parsedQuery instanceof ParsedGraphQuery) {
+			Optional<TupleExpr> sailTupleExpr = sailConnection.prepareQuery(ql, Query.QueryType.GRAPH, queryString,
+					baseURI);
+			if (sailTupleExpr.isPresent()) {
+				parsedQuery = new ParsedGraphQuery(queryString, sailTupleExpr.get());
+			}
+			return new SailGraphQuery((ParsedGraphQuery) parsedQuery, this);
+		} else if (parsedQuery instanceof ParsedBooleanQuery) {
+			Optional<TupleExpr> sailTupleExpr = sailConnection.prepareQuery(ql, Query.QueryType.BOOLEAN, queryString,
+					baseURI);
+			if (sailTupleExpr.isPresent()) {
+				parsedQuery = new ParsedBooleanQuery(queryString, sailTupleExpr.get());
+			}
+			return new SailBooleanQuery((ParsedBooleanQuery) parsedQuery, this);
+		} else {
+			throw new RuntimeException("Unexpected query type: " + parsedQuery.getClass());
+		}
+	}
+
+	@Override
 	public SailTupleQuery prepareTupleQuery(QueryLanguage ql, String queryString, String baseURI)
 			throws MalformedQueryException {
 		Optional<TupleExpr> sailTupleExpr = sailConnection.prepareQuery(ql, Query.QueryType.TUPLE, queryString,
@@ -305,6 +334,20 @@ public class SailRepositoryConnection extends AbstractRepositoryConnection imple
 		ParsedTupleQuery parsedQuery = sailTupleExpr
 				.map(expr -> new ParsedTupleQuery(queryString, expr))
 				.orElse(QueryParserUtil.parseTupleQuery(ql, queryString, baseURI));
+		return new SailTupleQuery(parsedQuery, this);
+	}
+
+	@Override
+	public SailTupleQuery prepareTupleQuery(QueryLanguage ql, VersionLabel qlVersion, String queryString,
+			String baseURI)
+			throws MalformedQueryException {
+		Optional<TupleExpr> sailTupleExpr = sailConnection.prepareQuery(ql, qlVersion, Query.QueryType.TUPLE,
+				queryString,
+				baseURI);
+
+		ParsedTupleQuery parsedQuery = sailTupleExpr
+				.map(expr -> new ParsedTupleQuery(queryString, expr))
+				.orElse(QueryParserUtil.parseTupleQuery(ql, qlVersion, queryString, baseURI));
 		return new SailTupleQuery(parsedQuery, this);
 	}
 
@@ -320,6 +363,19 @@ public class SailRepositoryConnection extends AbstractRepositoryConnection imple
 	}
 
 	@Override
+	public SailGraphQuery prepareGraphQuery(QueryLanguage ql, VersionLabel qlVersion, String queryString,
+			String baseURI)
+			throws MalformedQueryException {
+		Optional<TupleExpr> sailTupleExpr = sailConnection.prepareQuery(ql, qlVersion, Query.QueryType.GRAPH,
+				queryString,
+				baseURI);
+		ParsedGraphQuery parsedQuery = sailTupleExpr
+				.map(expr -> new ParsedGraphQuery(queryString, expr))
+				.orElse(QueryParserUtil.parseGraphQuery(ql, qlVersion, queryString, baseURI));
+		return new SailGraphQuery(parsedQuery, this);
+	}
+
+	@Override
 	public SailBooleanQuery prepareBooleanQuery(QueryLanguage ql, String queryString, String baseURI)
 			throws MalformedQueryException {
 		Optional<TupleExpr> sailTupleExpr = sailConnection.prepareQuery(ql, Query.QueryType.BOOLEAN, queryString,
@@ -331,9 +387,29 @@ public class SailRepositoryConnection extends AbstractRepositoryConnection imple
 	}
 
 	@Override
+	public SailBooleanQuery prepareBooleanQuery(QueryLanguage ql, VersionLabel qlVersion, String queryString,
+			String baseURI)
+			throws MalformedQueryException {
+		Optional<TupleExpr> sailTupleExpr = sailConnection.prepareQuery(ql, qlVersion, Query.QueryType.BOOLEAN,
+				queryString,
+				baseURI);
+		ParsedBooleanQuery parsedQuery = sailTupleExpr
+				.map(expr -> new ParsedBooleanQuery(queryString, expr))
+				.orElse(QueryParserUtil.parseBooleanQuery(ql, qlVersion, queryString, baseURI));
+		return new SailBooleanQuery(parsedQuery, this);
+	}
+
+	@Override
 	public Update prepareUpdate(QueryLanguage ql, String update, String baseURI)
 			throws RepositoryException, MalformedQueryException {
 		ParsedUpdate parsedUpdate = QueryParserUtil.parseUpdate(ql, update, baseURI);
+		return new SailUpdate(parsedUpdate, this);
+	}
+
+	@Override
+	public Update prepareUpdate(QueryLanguage ql, VersionLabel qlVersion, String update, String baseURI)
+			throws RepositoryException, MalformedQueryException {
+		ParsedUpdate parsedUpdate = QueryParserUtil.parseUpdate(ql, qlVersion, update, baseURI);
 		return new SailUpdate(parsedUpdate, this);
 	}
 
@@ -374,6 +450,27 @@ public class SailRepositoryConnection extends AbstractRepositoryConnection imple
 	}
 
 	@Override
+	public RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj, boolean includeInferred,
+			VersionLabel preferredRDFVersion, Resource... contexts) throws RepositoryException {
+		Objects.requireNonNull(contexts,
+				"contexts argument may not be null; either the value should be cast to Resource or an empty array should be supplied");
+		CloseableIteration<? extends Statement> statements = null;
+		try {
+			statements = sailConnection.getStatements(subj, pred, obj, includeInferred, preferredRDFVersion, contexts);
+			return createRepositoryResult(statements);
+		} catch (Throwable t) {
+			if (statements != null) {
+				statements.close();
+			}
+			if (t instanceof SailException) {
+				throw new RepositoryException("Unable to get statements from Sail", t);
+			} else {
+				throw t;
+			}
+		}
+	}
+
+	@Override
 	public boolean isEmpty() throws RepositoryException {
 		// The following is more efficient than "size() == 0" for Sails
 		return !hasStatement(null, null, null, false);
@@ -381,7 +478,7 @@ public class SailRepositoryConnection extends AbstractRepositoryConnection imple
 
 	@Override
 	public void exportStatements(Resource subj, IRI pred, Value obj, boolean includeInferred, RDFHandler handler,
-			Resource... contexts) throws RepositoryException, RDFHandlerException {
+			Resource... contexts) throws RepositoryException, RDFHandlerException { //TODO: check
 		handler.startRDF();
 
 		// Export namespace information
@@ -394,6 +491,29 @@ public class SailRepositoryConnection extends AbstractRepositoryConnection imple
 
 		// Export statements
 		try (var stIter = getStatements(subj, pred, obj, includeInferred, contexts)) {
+			while (stIter.hasNext()) {
+				handler.handleStatement(stIter.next());
+			}
+		}
+
+		handler.endRDF();
+	}
+
+	@Override
+	public void exportStatements(Resource subj, IRI pred, Value obj, boolean includeInferred, RDFHandler handler,
+			VersionLabel preferredRDFVersion, Resource... contexts) throws RepositoryException, RDFHandlerException {
+		handler.startRDF();
+
+		// Export namespace information
+		try (var nsIter = getNamespaces()) {
+			while (nsIter.hasNext()) {
+				Namespace ns = nsIter.next();
+				handler.handleNamespace(ns.getPrefix(), ns.getName());
+			}
+		}
+
+		// Export statements
+		try (var stIter = getStatements(subj, pred, obj, includeInferred, preferredRDFVersion, contexts)) {
 			while (stIter.hasNext()) {
 				handler.handleStatement(stIter.next());
 			}

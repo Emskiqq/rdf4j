@@ -22,6 +22,7 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.GraphQuery;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryLanguage;
@@ -85,6 +86,16 @@ public class CachingRepositoryConnection extends RepositoryConnectionWrapper imp
 	}
 
 	@Override
+	public TupleQuery prepareTupleQuery(QueryLanguage ql, VersionLabel qlVersion, String queryString, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		return new ResultCachingTupleQuery(
+				getDelegate().prepareTupleQuery(ql, qlVersion, queryString, baseURI),
+				this.localTupleQueryResultCache,
+				this.globalTupleQueryResultCache,
+				properties);
+	}
+
+	@Override
 	public GraphQuery prepareGraphQuery(QueryLanguage ql, String queryString, String baseURI)
 			throws MalformedQueryException, RepositoryException {
 		return new ResultCachingGraphQuery(
@@ -95,10 +106,27 @@ public class CachingRepositoryConnection extends RepositoryConnectionWrapper imp
 	}
 
 	@Override
+	public GraphQuery prepareGraphQuery(QueryLanguage ql, VersionLabel qlVersion, String queryString, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		return new ResultCachingGraphQuery(
+				getDelegate().prepareGraphQuery(ql, qlVersion, queryString, baseURI),
+				this.localGraphQueryResultCache,
+				this.globalGraphQueryResultCache,
+				this.properties);
+	}
+
+	@Override
 	public Update prepareUpdate(QueryLanguage ql, String updateString, String baseURI)
 			throws MalformedQueryException, RepositoryException {
 		return new ClearableAwareUpdate(
 				getDelegate().prepareUpdate(ql, updateString, baseURI), this);
+	}
+
+	@Override
+	public Update prepareUpdate(QueryLanguage ql, VersionLabel qlVersion, String updateString, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		return new ClearableAwareUpdate(
+				getDelegate().prepareUpdate(ql, qlVersion, updateString, baseURI), this);
 	}
 
 	@Override

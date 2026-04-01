@@ -16,10 +16,8 @@ import org.eclipse.rdf4j.http.client.SPARQLProtocolSession;
 import org.eclipse.rdf4j.http.client.query.AbstractHTTPUpdate;
 import org.eclipse.rdf4j.http.protocol.Protocol.Action;
 import org.eclipse.rdf4j.http.protocol.UnauthorizedException;
-import org.eclipse.rdf4j.query.MalformedQueryException;
-import org.eclipse.rdf4j.query.QueryInterruptedException;
-import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.UpdateExecutionException;
+import org.eclipse.rdf4j.model.util.VersionLabel;
+import org.eclipse.rdf4j.query.*;
 import org.eclipse.rdf4j.repository.RepositoryException;
 
 /**
@@ -38,6 +36,12 @@ public class HTTPUpdate extends AbstractHTTPUpdate {
 		this.httpCon = con;
 	}
 
+	public HTTPUpdate(HTTPRepositoryConnection con, QueryLanguage ql, VersionLabel qlVersion, String queryString,
+			String baseURI) {
+		super(con.getSesameSession(), ql, qlVersion, queryString, baseURI);
+		this.httpCon = con;
+	}
+
 	@Override
 	public void execute() throws UpdateExecutionException {
 		try {
@@ -46,7 +50,8 @@ public class HTTPUpdate extends AbstractHTTPUpdate {
 					// execute update immediately
 					SPARQLProtocolSession client = getHttpClient();
 					try {
-						client.sendUpdate(getQueryLanguage(), getQueryString(), getBaseURI(), dataset, includeInferred,
+						client.sendUpdate(getQueryLanguage(), getQLVersion(), getQueryString(), getBaseURI(), dataset,
+								includeInferred,
 								getMaxExecutionTime(), getBindingsArray());
 					} catch (UnauthorizedException | QueryInterruptedException | MalformedQueryException
 							| IOException e) {
@@ -62,7 +67,8 @@ public class HTTPUpdate extends AbstractHTTPUpdate {
 			SPARQLProtocolSession client = getHttpClient();
 			try {
 				httpCon.flushTransactionState(Action.UPDATE);
-				client.sendUpdate(getQueryLanguage(), getQueryString(), getBaseURI(), dataset, includeInferred,
+				client.sendUpdate(getQueryLanguage(), getQLVersion(), getQueryString(), getBaseURI(), dataset,
+						includeInferred,
 						getMaxExecutionTime(), getBindingsArray());
 			} catch (UnauthorizedException | QueryInterruptedException | MalformedQueryException | IOException e) {
 				throw new HTTPUpdateExecutionException(e.getMessage(), e);

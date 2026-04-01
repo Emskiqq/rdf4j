@@ -110,7 +110,8 @@ public class NamespacesController extends AbstractController {
 				TupleQueryResultWriterRegistry.getInstance());
 
 		model.put(QueryResultView.FILENAME_HINT_KEY, "namespaces");
-		model.put(QueryResultView.HEADERS_ONLY, headersOnly);
+		model.put(QueryResultView.HEADERS_ONLY, headersOnly); // TODO: do we also need an RDF version in namespace
+																// controller? I do not think so,
 		model.put(QueryResultView.FACTORY_KEY, factory);
 
 		return new ModelAndView(TupleQueryResultView.getInstance(), model);

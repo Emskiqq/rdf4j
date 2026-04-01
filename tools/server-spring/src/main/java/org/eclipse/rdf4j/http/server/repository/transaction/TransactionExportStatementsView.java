@@ -21,10 +21,12 @@ import org.eclipse.rdf4j.http.server.ServerHTTPException;
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.RDFWriterFactory;
+import org.eclipse.rdf4j.rio.helpers.RDFVersionSettings;
 import org.springframework.web.servlet.View;
 
 import jakarta.servlet.http.HttpServletRequest;
@@ -52,6 +54,10 @@ public class TransactionExportStatementsView implements View {
 	public static final String TRANSACTION_KEY = "transaction";
 
 	public static final String FACTORY_KEY = "factory";
+
+	public static final String PREFERRED_OUTPUT_RDF_VERSION = "preferredOutputRDFVersion";
+
+	public static final String INPUT_RDF_VERSION = "inputRDFVersion";
 
 	public static final String HEADERS_ONLY = "headersOnly";
 
@@ -82,12 +88,14 @@ public class TransactionExportStatementsView implements View {
 		boolean headersOnly = (Boolean) model.get(HEADERS_ONLY);
 
 		RDFWriterFactory rdfWriterFactory = (RDFWriterFactory) model.get(FACTORY_KEY);
+		VersionLabel preferredRDFVersion = (VersionLabel) model.get(PREFERRED_OUTPUT_RDF_VERSION);
 
 		RDFFormat rdfFormat = rdfWriterFactory.getRDFFormat();
 
 		try {
 			try (OutputStream out = response.getOutputStream()) {
 				RDFWriter rdfWriter = rdfWriterFactory.getWriter(out);
+				rdfWriter.getWriterConfig().set(RDFVersionSettings.PREFERRED_OUTPUT_RDF_VERSION, preferredRDFVersion);
 
 				response.setStatus(SC_OK);
 
@@ -96,6 +104,11 @@ public class TransactionExportStatementsView implements View {
 					Charset charset = rdfFormat.getCharset();
 					mimeType += "; charset=" + charset.name();
 				}
+				// TODO: Use this or change the version, depending on what approach we decide on: ignore the
+				// version/always return 1.2 or do indeed follow the user's requirements.
+//				if (preferredRDFVersion != null) {
+//					mimeType += "; " + VERSION_MEDIA_TYPE_PARAM + "=" + preferredRDFVersion.getValue();
+//				}
 				response.setContentType(mimeType);
 
 				String filename = "statements";

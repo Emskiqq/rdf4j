@@ -10,6 +10,7 @@
  *******************************************************************************/
 package org.eclipse.rdf4j.query.parser;
 
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 
 /**
@@ -20,4 +21,16 @@ public interface QueryParser {
 	ParsedUpdate parseUpdate(String updateStr, String baseURI) throws MalformedQueryException;
 
 	ParsedQuery parseQuery(String queryStr, String baseURI) throws MalformedQueryException;
+
+	ParsedUpdate parseUpdate(String updateStr, VersionLabel qlVersion, String baseURI) throws MalformedQueryException;
+
+	ParsedQuery parseQuery(String queryStr, VersionLabel qlVersion, String baseURI) throws MalformedQueryException;
+
+	default void setQLVersion(VersionLabel version) {
+		throw new UnsupportedOperationException();
+	}
+
+	default VersionLabel getQLVersion() {
+		throw new UnsupportedOperationException();
+	}
 }

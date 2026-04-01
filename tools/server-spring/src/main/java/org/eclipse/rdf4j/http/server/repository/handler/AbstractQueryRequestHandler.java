@@ -27,6 +27,7 @@ import org.eclipse.rdf4j.http.server.ProtocolUtil;
 import org.eclipse.rdf4j.http.server.ServerHTTPException;
 import org.eclipse.rdf4j.http.server.repository.QueryResultView;
 import org.eclipse.rdf4j.http.server.repository.resolver.RepositoryResolver;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.Query;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.QueryInterruptedException;
@@ -162,15 +163,19 @@ public abstract class AbstractQueryRequestHandler implements QueryRequestHandler
 	abstract protected Query getQuery(HttpServletRequest request, RepositoryConnection repositoryCon,
 			String queryString) throws IOException, HTTPException;
 
-	protected ModelAndView getModelAndView(
+	protected <FF extends FileFormat, S> ModelAndView getModelAndView(
 			HttpServletRequest request, HttpServletResponse response,
 			boolean headersOnly, RepositoryConnection repositoryCon, View view, Object queryResult,
-			FileFormatServiceRegistry<? extends FileFormat, ?> registry
+			FileFormatServiceRegistry<FF, S> registry
 	) throws ClientHTTPException {
+		S factory = ProtocolUtil.getAcceptableService(request, response, registry);
+		VersionLabel preferredRDFVersion = ProtocolUtil.getPreferredRDFVersion(request, factory, registry);
+
 		Map<String, Object> model = new HashMap<>();
 		model.put(QueryResultView.FILENAME_HINT_KEY, "query-result");
 		model.put(QueryResultView.QUERY_RESULT_KEY, queryResult);
-		model.put(QueryResultView.FACTORY_KEY, ProtocolUtil.getAcceptableService(request, response, registry));
+		model.put(QueryResultView.FACTORY_KEY, factory);
+		model.put(QueryResultView.PREFERRED_OUTPUT_RDF_VERSION, preferredRDFVersion);
 		model.put(QueryResultView.HEADERS_ONLY, headersOnly);
 		model.put(QueryResultView.CONNECTION_KEY, repositoryCon);
 

@@ -24,13 +24,8 @@ import org.eclipse.rdf4j.model.Namespace;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.query.BooleanQuery;
-import org.eclipse.rdf4j.query.GraphQuery;
-import org.eclipse.rdf4j.query.MalformedQueryException;
-import org.eclipse.rdf4j.query.Query;
-import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.TupleQuery;
-import org.eclipse.rdf4j.query.Update;
+import org.eclipse.rdf4j.model.util.VersionLabel;
+import org.eclipse.rdf4j.query.*;
 import org.eclipse.rdf4j.repository.DelegatingRepositoryConnection;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
@@ -53,7 +48,7 @@ import org.eclipse.rdf4j.rio.RDFParseException;
  * @see #isDelegatingRead()
  */
 public class RepositoryConnectionWrapper extends AbstractRepositoryConnection
-		implements DelegatingRepositoryConnection {
+		implements DelegatingRepositoryConnection, RDFVersionAware {
 
 	private volatile RepositoryConnection delegate;
 
@@ -253,6 +248,16 @@ public class RepositoryConnectionWrapper extends AbstractRepositoryConnection
 	}
 
 	@Override
+	public void exportStatements(Resource subj, IRI pred, Value obj, boolean includeInferred, RDFHandler handler,
+			VersionLabel preferredRDFVersion, Resource... contexts) throws RepositoryException, RDFHandlerException {
+		if (isDelegatingRead()) {
+			getDelegate().exportStatements(subj, pred, obj, includeInferred, handler, preferredRDFVersion, contexts);
+		} else {
+			exportStatements(getStatements(subj, pred, obj, includeInferred, preferredRDFVersion, contexts), handler);
+		}
+	}
+
+	@Override
 	public RepositoryResult<Resource> getContextIDs() throws RepositoryException {
 		return getDelegate().getContextIDs();
 	}
@@ -271,6 +276,12 @@ public class RepositoryConnectionWrapper extends AbstractRepositoryConnection
 	public RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj, boolean includeInferred,
 			Resource... contexts) throws RepositoryException {
 		return getDelegate().getStatements(subj, pred, obj, includeInferred, contexts);
+	}
+
+	@Override
+	public RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj, boolean includeInferred,
+			VersionLabel preferredRDFVersion, Resource... contexts) throws RepositoryException {
+		return getDelegate().getStatements(subj, pred, obj, includeInferred, preferredRDFVersion, contexts);
 	}
 
 	@Override
@@ -325,9 +336,21 @@ public class RepositoryConnectionWrapper extends AbstractRepositoryConnection
 	}
 
 	@Override
+	public GraphQuery prepareGraphQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		return getDelegate().prepareGraphQuery(ql, qlVersion, query, baseURI);
+	}
+
+	@Override
 	public Query prepareQuery(QueryLanguage ql, String query, String baseURI)
 			throws MalformedQueryException, RepositoryException {
 		return getDelegate().prepareQuery(ql, query, baseURI);
+	}
+
+	@Override
+	public Query prepareQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		return getDelegate().prepareQuery(ql, qlVersion, query, baseURI);
 	}
 
 	@Override
@@ -337,15 +360,33 @@ public class RepositoryConnectionWrapper extends AbstractRepositoryConnection
 	}
 
 	@Override
+	public TupleQuery prepareTupleQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		return getDelegate().prepareTupleQuery(ql, qlVersion, query, baseURI);
+	}
+
+	@Override
 	public BooleanQuery prepareBooleanQuery(QueryLanguage ql, String query, String baseURI)
 			throws MalformedQueryException, RepositoryException {
 		return getDelegate().prepareBooleanQuery(ql, query, baseURI);
 	}
 
 	@Override
+	public BooleanQuery prepareBooleanQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		return getDelegate().prepareBooleanQuery(ql, qlVersion, query, baseURI);
+	}
+
+	@Override
 	public Update prepareUpdate(QueryLanguage ql, String update, String baseURI)
 			throws MalformedQueryException, RepositoryException {
 		return getDelegate().prepareUpdate(ql, update, baseURI);
+	}
+
+	@Override
+	public Update prepareUpdate(QueryLanguage ql, VersionLabel qlVersion, String update, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		return getDelegate().prepareUpdate(ql, qlVersion, update, baseURI);
 	}
 
 	@Override

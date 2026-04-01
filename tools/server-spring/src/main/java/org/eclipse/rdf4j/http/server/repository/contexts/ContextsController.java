@@ -67,7 +67,8 @@ public class ContextsController extends AbstractController {
 					}
 				}
 				model.put(QueryResultView.QUERY_RESULT_KEY, new IteratingTupleQueryResult(columnNames, contexts));
-				model.put(QueryResultView.FILENAME_HINT_KEY, "contexts");
+				model.put(QueryResultView.FILENAME_HINT_KEY, "contexts"); // TODO: do we also need version in the
+																			// contexts controller? I do not think so.
 				model.put(QueryResultView.FACTORY_KEY, factory);
 				model.put(QueryResultView.HEADERS_ONLY, METHOD_HEAD.equals(request.getMethod()));
 				model.put(QueryResultView.CONNECTION_KEY, repositoryCon);

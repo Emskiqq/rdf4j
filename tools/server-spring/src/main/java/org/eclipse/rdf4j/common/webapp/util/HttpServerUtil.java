@@ -241,11 +241,14 @@ public class HttpServerUtil {
 		}
 
 		for (int i = 0; i < mimeTypeElem.getParameterCount(); i++) {
+			if (acceptElem.getParameter(i).getKey().equals("version")) {
+				// Ignore version parameter for mime type comparison
+				continue;
+			}
 			if (!mimeTypeElem.getParameter(i).equals(acceptElem.getParameter(i))) {
 				return false;
 			}
 		}
-
 		return true;
 	}
 

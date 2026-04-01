@@ -997,7 +997,8 @@ public abstract class RepositoryConnectionTest {
 		testCon.commit();
 
 		// get statements with either no context or context2
-		try (RepositoryResult<Statement> iter = testCon.getStatements(null, null, null, false, null, context2)) {
+		try (RepositoryResult<Statement> iter = testCon.getStatements(null, null, null, false, (Resource) null,
+				context2)) {
 			int count = 0;
 			while (iter.hasNext()) {
 				count++;
@@ -1049,7 +1050,8 @@ public abstract class RepositoryConnectionTest {
 		}
 
 		// get statements with either no context or context2
-		try (RepositoryResult<Statement> iter = testCon.getStatements(null, null, null, false, null, context2)) {
+		try (RepositoryResult<Statement> iter = testCon.getStatements(null, null, null, false, (Resource) null,
+				context2)) {
 			int count = 0;
 			while (iter.hasNext()) {
 				count++;

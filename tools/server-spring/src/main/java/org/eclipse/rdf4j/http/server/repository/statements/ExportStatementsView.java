@@ -25,6 +25,7 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.eclipse.rdf4j.rio.RDFFormat;
@@ -32,6 +33,7 @@ import org.eclipse.rdf4j.rio.RDFHandler;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.RDFWriterFactory;
+import org.eclipse.rdf4j.rio.helpers.RDFVersionSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.web.servlet.View;
@@ -56,6 +58,8 @@ public class ExportStatementsView implements View {
 	public static final String CONNECTION_KEY = "connection";
 	public static final String TRANSACTION_ID_KEY = "transactionID";
 	public static final String FACTORY_KEY = "factory";
+	public static final String PREFERRED_OUTPUT_RDF_VERSION = "preferredOutputRDFVersion";
+	public static final String INPUT_RDF_VERSION = "inputRDFVersion";
 	public static final String HEADERS_ONLY = "headersOnly";
 
 	private static final ExportStatementsView INSTANCE = new ExportStatementsView();
@@ -109,6 +113,8 @@ public class ExportStatementsView implements View {
 		boolean headersOnly = Boolean.TRUE.equals(model.get(HEADERS_ONLY));
 
 		RDFWriterFactory factory = (RDFWriterFactory) model.get(FACTORY_KEY);
+		VersionLabel preferredRDFVersion = (VersionLabel) model.get(PREFERRED_OUTPUT_RDF_VERSION);
+
 		RDFFormat rdfFormat = factory.getRDFFormat();
 
 		attemptToDetectExceptions(request, factory, headersOnly, subj, pred, obj, useInferencing, contexts);
@@ -120,6 +126,11 @@ public class ExportStatementsView implements View {
 			Charset charset = rdfFormat.getCharset();
 			mimeType += "; charset=" + charset.name();
 		}
+		// TODO: Use this or change the version, depending on what approach we decide on: ignore the
+		// version/always return 1.2 or do indeed follow the user's requirements.
+//		if (preferredRDFVersion != null) {
+//			mimeType += "; " + VERSION_MEDIA_TYPE_PARAM + "=" + preferredRDFVersion.getValue();
+//		}
 		response.setContentType(mimeType);
 
 		String filename = "statements";
@@ -136,6 +147,7 @@ public class ExportStatementsView implements View {
 
 		try (OutputStream out = response.getOutputStream()) {
 			RDFWriter writer = factory.getWriter(out);
+			writer.getWriterConfig().set(RDFVersionSettings.PREFERRED_OUTPUT_RDF_VERSION, preferredRDFVersion);
 			try (RepositoryConnection conn = RepositoryInterceptor.getRepositoryConnection(request)) {
 				conn.exportStatements(subj, pred, obj, useInferencing, writer, contexts);
 				out.flush();

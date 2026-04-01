@@ -26,6 +26,7 @@ import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.model.vocabulary.DCTERMS;
 import org.eclipse.rdf4j.model.vocabulary.FOAF;
 import org.eclipse.rdf4j.query.BooleanQuery;
@@ -182,6 +183,12 @@ public abstract class AbstractComplianceTest {
 		}
 
 		@Override
+		public Query prepareQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+				throws RepositoryException, MalformedQueryException {
+			return checkThatHashCodeWorks(delegate.prepareQuery(ql, qlVersion, query, baseURI));
+		}
+
+		@Override
 		public TupleQuery prepareTupleQuery(String query) throws RepositoryException, MalformedQueryException {
 			return checkThatHashCodeWorks(delegate.prepareTupleQuery(query));
 		}
@@ -196,6 +203,12 @@ public abstract class AbstractComplianceTest {
 		public TupleQuery prepareTupleQuery(QueryLanguage ql, String query, String baseURI)
 				throws RepositoryException, MalformedQueryException {
 			return checkThatHashCodeWorks(delegate.prepareTupleQuery(ql, query, baseURI));
+		}
+
+		@Override
+		public TupleQuery prepareTupleQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+				throws RepositoryException, MalformedQueryException {
+			return checkThatHashCodeWorks(delegate.prepareTupleQuery(ql, qlVersion, query, baseURI));
 		}
 
 		@Override
@@ -216,6 +229,12 @@ public abstract class AbstractComplianceTest {
 		}
 
 		@Override
+		public GraphQuery prepareGraphQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+				throws RepositoryException, MalformedQueryException {
+			return checkThatHashCodeWorks(delegate.prepareGraphQuery(ql, qlVersion, query, baseURI));
+		}
+
+		@Override
 		public BooleanQuery prepareBooleanQuery(String query) throws RepositoryException, MalformedQueryException {
 			return checkThatHashCodeWorks(delegate.prepareBooleanQuery(query));
 		}
@@ -230,6 +249,12 @@ public abstract class AbstractComplianceTest {
 		public BooleanQuery prepareBooleanQuery(QueryLanguage ql, String query, String baseURI)
 				throws RepositoryException, MalformedQueryException {
 			return checkThatHashCodeWorks(delegate.prepareBooleanQuery(ql, query, baseURI));
+		}
+
+		@Override
+		public BooleanQuery prepareBooleanQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+				throws RepositoryException, MalformedQueryException {
+			return checkThatHashCodeWorks(delegate.prepareBooleanQuery(ql, qlVersion, query, baseURI));
 		}
 
 		@Override
@@ -250,6 +275,12 @@ public abstract class AbstractComplianceTest {
 		}
 
 		@Override
+		public Update prepareUpdate(QueryLanguage ql, VersionLabel qlVersion, String update, String baseURI)
+				throws RepositoryException, MalformedQueryException {
+			return checkThatHashCodeWorks(delegate.prepareUpdate(ql, qlVersion, update, baseURI));
+		}
+
+		@Override
 		public RepositoryResult<Resource> getContextIDs() throws RepositoryException {
 			return delegate.getContextIDs();
 		}
@@ -261,9 +292,22 @@ public abstract class AbstractComplianceTest {
 		}
 
 		@Override
+		public RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj,
+				VersionLabel preferredRDFVersion, Resource... contexts)
+				throws RepositoryException {
+			return delegate.getStatements(subj, pred, obj, preferredRDFVersion, contexts);
+		}
+
+		@Override
 		public RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj, boolean includeInferred,
 				Resource... contexts) throws RepositoryException {
 			return delegate.getStatements(subj, pred, obj, includeInferred, contexts);
+		}
+
+		@Override
+		public RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj, boolean includeInferred,
+				VersionLabel preferredRDFVersion, Resource... contexts) throws RepositoryException {
+			return delegate.getStatements(subj, pred, obj, includeInferred, preferredRDFVersion, contexts);
 		}
 
 		@Override
@@ -282,6 +326,13 @@ public abstract class AbstractComplianceTest {
 		public void exportStatements(Resource subj, IRI pred, Value obj, boolean includeInferred, RDFHandler handler,
 				Resource... contexts) throws RepositoryException, RDFHandlerException {
 			delegate.exportStatements(subj, pred, obj, includeInferred, handler, contexts);
+		}
+
+		@Override
+		public void exportStatements(Resource subj, IRI pred, Value obj, boolean includeInferred, RDFHandler handler,
+				VersionLabel preferredRDFVersion, Resource... contexts)
+				throws RepositoryException, RDFHandlerException {
+			delegate.exportStatements(subj, pred, obj, includeInferred, handler, preferredRDFVersion, contexts);
 		}
 
 		@Override

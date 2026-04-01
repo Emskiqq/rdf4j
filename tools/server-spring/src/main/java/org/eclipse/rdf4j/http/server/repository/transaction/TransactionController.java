@@ -64,6 +64,7 @@ import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.BooleanQuery;
 import org.eclipse.rdf4j.query.GraphQuery;
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -329,6 +330,8 @@ public class TransactionController extends AbstractController implements Disposa
 
 		RDFWriterFactory rdfWriterFactory = ProtocolUtil.getAcceptableService(request, response,
 				RDFWriterRegistry.getInstance());
+		VersionLabel preferredRDFVersion = ProtocolUtil.getPreferredRDFVersion(request, rdfWriterFactory,
+				RDFWriterRegistry.getInstance());
 
 		Map<String, Object> model = new HashMap<>();
 		model.put(TransactionExportStatementsView.SUBJECT_KEY, subj);
@@ -337,6 +340,7 @@ public class TransactionController extends AbstractController implements Disposa
 		model.put(TransactionExportStatementsView.CONTEXTS_KEY, contexts);
 		model.put(TransactionExportStatementsView.USE_INFERENCING_KEY, Boolean.valueOf(useInferencing));
 		model.put(TransactionExportStatementsView.FACTORY_KEY, rdfWriterFactory);
+		model.put(TransactionExportStatementsView.PREFERRED_OUTPUT_RDF_VERSION, preferredRDFVersion);
 		model.put(TransactionExportStatementsView.HEADERS_ONLY, METHOD_HEAD.equals(request.getMethod()));
 
 		model.put(TransactionExportStatementsView.TRANSACTION_KEY, transaction);
@@ -348,7 +352,8 @@ public class TransactionController extends AbstractController implements Disposa
 	 * {@link QueryResultView} will take care of correctly releasing the connection back to the
 	 * {@link ActiveTransactionRegistry}, after fully rendering the query result for sending over the wire.
 	 */
-	private ModelAndView processQuery(Transaction txn, HttpServletRequest request, HttpServletResponse response)
+	private <FF extends FileFormat, S> ModelAndView processQuery(Transaction txn, HttpServletRequest request,
+			HttpServletResponse response)
 			throws IOException, HTTPException {
 		String queryStr;
 		final String contentType = request.getContentType();
@@ -361,7 +366,7 @@ public class TransactionController extends AbstractController implements Disposa
 
 		View view;
 		Object queryResult;
-		FileFormatServiceRegistry<? extends FileFormat, ?> registry;
+		FileFormatServiceRegistry<FF, S> registry;
 
 		try {
 			Query query = getQuery(txn, queryStr, request, response);
@@ -370,19 +375,19 @@ public class TransactionController extends AbstractController implements Disposa
 				TupleQuery tQuery = (TupleQuery) query;
 
 				queryResult = txn.evaluate(tQuery);
-				registry = TupleQueryResultWriterRegistry.getInstance();
+				registry = (FileFormatServiceRegistry<FF, S>) TupleQueryResultWriterRegistry.getInstance();
 				view = TupleQueryResultView.getInstance();
 			} else if (query instanceof GraphQuery) {
 				GraphQuery gQuery = (GraphQuery) query;
 
 				queryResult = txn.evaluate(gQuery);
-				registry = RDFWriterRegistry.getInstance();
+				registry = (FileFormatServiceRegistry<FF, S>) RDFWriterRegistry.getInstance();
 				view = GraphQueryResultView.getInstance();
 			} else if (query instanceof BooleanQuery) {
 				BooleanQuery bQuery = (BooleanQuery) query;
 
 				queryResult = txn.evaluate(bQuery);
-				registry = BooleanQueryResultWriterRegistry.getInstance();
+				registry = (FileFormatServiceRegistry<FF, S>) BooleanQueryResultWriterRegistry.getInstance();
 				view = BooleanQueryResultView.getInstance();
 			} else {
 				throw new ClientHTTPException(SC_BAD_REQUEST, "Unsupported query type: " + query.getClass().getName());
@@ -405,12 +410,14 @@ public class TransactionController extends AbstractController implements Disposa
 				throw new ServerHTTPException("Query evaluation error: " + e.getMessage());
 			}
 		}
-		Object factory = ProtocolUtil.getAcceptableService(request, response, registry);
+		S factory = ProtocolUtil.getAcceptableService(request, response, registry);
+		VersionLabel preferredRDFVersion = ProtocolUtil.getPreferredRDFVersion(request, factory, registry);
 
 		Map<String, Object> model = new HashMap<>();
 		model.put(QueryResultView.FILENAME_HINT_KEY, "query-result");
 		model.put(QueryResultView.QUERY_RESULT_KEY, queryResult);
 		model.put(QueryResultView.FACTORY_KEY, factory);
+		model.put(QueryResultView.PREFERRED_OUTPUT_RDF_VERSION, preferredRDFVersion);
 		model.put(QueryResultView.HEADERS_ONLY, false); // TODO needed for HEAD
 		// requests.
 		return new ModelAndView(view, model);

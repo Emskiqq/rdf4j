@@ -15,6 +15,7 @@ import java.lang.ref.WeakReference;
 
 import org.eclipse.rdf4j.http.client.SPARQLProtocolSession;
 import org.eclipse.rdf4j.http.client.query.AbstractHTTPQuery;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.GraphQuery;
 import org.eclipse.rdf4j.query.GraphQueryResult;
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -37,6 +38,11 @@ public class SPARQLGraphQuery extends AbstractHTTPQuery implements GraphQuery {
 		super(httpClient, QueryLanguage.SPARQL, queryString, baseURI);
 	}
 
+	public SPARQLGraphQuery(SPARQLProtocolSession httpClient, String baseURI, String queryString,
+			VersionLabel qlVersion) {
+		super(httpClient, QueryLanguage.SPARQL, qlVersion, queryString, baseURI);
+	}
+
 	@Override
 	public GraphQueryResult evaluate() throws QueryEvaluationException {
 		SPARQLProtocolSession client = getHttpClient();
@@ -44,7 +50,8 @@ public class SPARQLGraphQuery extends AbstractHTTPQuery implements GraphQuery {
 			// TODO getQueryString() already inserts bindings, use emptybindingset
 			// as last argument?
 			return client.sendGraphQuery(queryLanguage, getQueryString(), baseURI, dataset, getIncludeInferred(),
-					getMaxExecutionTime(), ((WeakReference<?>) null), getBindingsArray());
+					getMaxExecutionTime(), ((WeakReference<?>) null), qlVersion, preferredRDFResultsVersion,
+					getBindingsArray());
 		} catch (IOException | RepositoryException | MalformedQueryException e) {
 			throw new QueryEvaluationException(e.getMessage(), e);
 		}
@@ -56,7 +63,7 @@ public class SPARQLGraphQuery extends AbstractHTTPQuery implements GraphQuery {
 		SPARQLProtocolSession client = getHttpClient();
 		try {
 			client.sendGraphQuery(queryLanguage, getQueryString(), baseURI, dataset, getIncludeInferred(),
-					getMaxExecutionTime(), handler, getBindingsArray());
+					getMaxExecutionTime(), handler, qlVersion, preferredRDFResultsVersion, getBindingsArray());
 		} catch (IOException | RepositoryException | MalformedQueryException e) {
 			throw new QueryEvaluationException(e.getMessage(), e);
 		}

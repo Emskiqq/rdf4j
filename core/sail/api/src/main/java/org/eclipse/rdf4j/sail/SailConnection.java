@@ -24,6 +24,7 @@ import org.eclipse.rdf4j.model.Namespace;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.Dataset;
 import org.eclipse.rdf4j.query.Query;
@@ -76,6 +77,25 @@ public interface SailConnection extends AutoCloseable {
 	}
 
 	/**
+	 * Allows the SailConnection to bypass the standard query parser and provide its own internal {@link TupleExpr}
+	 * implementation. By default this method returns an empty result, signaling that it will rely on the RDF4J query
+	 * parser.
+	 *
+	 * @param ql        the query language.
+	 * @param qlVersion the RDF version of the query language.
+	 * @param type      indicates if the supplied query is a graph, tuple, or boolean query
+	 * @param query     the unparsed query string
+	 * @param baseURI   the provided base URI. May be null or empty.
+	 * @return an optional TupleExpr that represents a sail-specific version of the query, which {@link #evaluate} can
+	 *         process. Returns {@link Optional#empty()} if the Sail does not provide its own query processing.
+	 * @since 3.2.0
+	 */
+	default Optional<TupleExpr> prepareQuery(QueryLanguage ql, VersionLabel qlVersion, Query.QueryType type,
+			String query, String baseURI) {
+		return Optional.empty();
+	}
+
+	/**
 	 * Evaluates the supplied TupleExpr on the data contained in this Sail object, using the (optional) dataset and
 	 * supplied bindings as input parameters.
 	 *
@@ -120,6 +140,30 @@ public interface SailConnection extends AutoCloseable {
 	 */
 	CloseableIteration<? extends Statement> getStatements(Resource subj, IRI pred, Value obj,
 			boolean includeInferred, Resource... contexts) throws SailException;
+
+	/**
+	 * Gets all statements from the specified contexts that have a specific subject, predicate and/or object. All three
+	 * parameters may be null to indicate wildcards. The <var>includeInferred</var> parameter can be used to control
+	 * which statements are fetched: all statements or only the statements that have been added explicitly.
+	 *
+	 * @param subj                A Resource specifying the subject, or <var>null</var> for a wildcard.
+	 * @param pred                A URI specifying the predicate, or <var>null</var> for a wildcard.
+	 * @param obj                 A Value specifying the object, or <var>null</var> for a wildcard.
+	 * @param includeInferred     if false, no inferred statements are returned; if true, inferred statements are
+	 *                            returned if available
+	 * @param preferredRDFVersion The preferred RDF version of the statements.
+	 * @param contexts            The context(s) to get the data from. Note that this parameter is a vararg and as such
+	 *                            is optional. If no contexts are specified the method operates on the entire
+	 *                            repository. A <var>null</var> value can be used to match context-less statements.
+	 * @return The statements matching the specified pattern.
+	 * @throws SailException         If the Sail object encountered an error or unexpected situation internally.
+	 * @throws IllegalStateException If the connection has been closed.
+	 */
+	default CloseableIteration<? extends Statement> getStatements(Resource subj, IRI pred, Value obj,
+			boolean includeInferred, VersionLabel preferredRDFVersion,
+			Resource... contexts) throws SailException {
+		throw new UnsupportedOperationException();
+	}
 
 	/**
 	 * Gets all statements from the specified contexts that have a specific subject, predicate and/or object. All three

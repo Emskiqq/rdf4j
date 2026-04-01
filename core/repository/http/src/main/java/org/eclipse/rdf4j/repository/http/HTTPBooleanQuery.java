@@ -15,6 +15,7 @@ import java.io.IOException;
 import org.eclipse.rdf4j.http.client.SPARQLProtocolSession;
 import org.eclipse.rdf4j.http.client.query.AbstractHTTPQuery;
 import org.eclipse.rdf4j.http.protocol.Protocol;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.BooleanQuery;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
@@ -38,6 +39,12 @@ public class HTTPBooleanQuery extends AbstractHTTPQuery implements BooleanQuery 
 		this.conn = conn;
 	}
 
+	public HTTPBooleanQuery(HTTPRepositoryConnection conn, QueryLanguage ql, VersionLabel qlVersion, String queryString,
+			String baseURI) {
+		super(conn.getSesameSession(), ql, qlVersion, queryString, baseURI);
+		this.conn = conn;
+	}
+
 	@Override
 	public boolean evaluate() throws QueryEvaluationException {
 		SPARQLProtocolSession client = getHttpClient();
@@ -45,7 +52,7 @@ public class HTTPBooleanQuery extends AbstractHTTPQuery implements BooleanQuery 
 		try {
 			conn.flushTransactionState(Protocol.Action.QUERY);
 			return client.sendBooleanQuery(queryLanguage, queryString, baseURI, dataset, getIncludeInferred(),
-					getMaxExecutionTime(), getBindingsArray());
+					getMaxExecutionTime(), qlVersion, preferredRDFResultsVersion, getBindingsArray());
 		} catch (IOException | RepositoryException | MalformedQueryException e) {
 			throw new HTTPQueryEvaluationException(e.getMessage(), e);
 		}

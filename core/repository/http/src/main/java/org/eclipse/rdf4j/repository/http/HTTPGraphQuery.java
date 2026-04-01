@@ -16,6 +16,7 @@ import java.lang.ref.WeakReference;
 import org.eclipse.rdf4j.http.client.SPARQLProtocolSession;
 import org.eclipse.rdf4j.http.client.query.AbstractHTTPQuery;
 import org.eclipse.rdf4j.http.protocol.Protocol;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.GraphQuery;
 import org.eclipse.rdf4j.query.GraphQueryResult;
 import org.eclipse.rdf4j.query.MalformedQueryException;
@@ -44,13 +45,20 @@ public class HTTPGraphQuery extends AbstractHTTPQuery implements GraphQuery {
 		this.conn = conn;
 	}
 
+	public HTTPGraphQuery(HTTPRepositoryConnection conn, QueryLanguage ql, VersionLabel qlVersion, String queryString,
+			String baseURI) {
+		super(conn.getSesameSession(), ql, qlVersion, queryString, baseURI);
+		this.conn = conn;
+	}
+
 	@Override
 	public GraphQueryResult evaluate() throws QueryEvaluationException {
 		SPARQLProtocolSession client = getHttpClient();
 		try {
 			conn.flushTransactionState(Protocol.Action.QUERY);
 			return client.sendGraphQuery(queryLanguage, queryString, baseURI, dataset, getIncludeInferred(),
-					getMaxExecutionTime(), ((WeakReference<?>) null), getBindingsArray());
+					getMaxExecutionTime(), ((WeakReference<?>) null), qlVersion, preferredRDFResultsVersion,
+					getBindingsArray());
 		} catch (IOException | RepositoryException | MalformedQueryException e) {
 			throw new HTTPQueryEvaluationException(e.getMessage(), e);
 		}
@@ -71,7 +79,7 @@ public class HTTPGraphQuery extends AbstractHTTPQuery implements GraphQuery {
 		try {
 			conn.flushTransactionState(Protocol.Action.QUERY);
 			client.sendGraphQuery(queryLanguage, queryString, baseURI, dataset, includeInferred, getMaxExecutionTime(),
-					handler, getBindingsArray());
+					handler, qlVersion, preferredRDFResultsVersion, getBindingsArray());
 		} catch (IOException | RepositoryException | MalformedQueryException e) {
 			throw new HTTPQueryEvaluationException(e.getMessage(), e);
 		}

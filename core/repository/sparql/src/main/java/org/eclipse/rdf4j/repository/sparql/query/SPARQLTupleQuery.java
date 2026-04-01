@@ -15,6 +15,7 @@ import java.lang.ref.WeakReference;
 
 import org.eclipse.rdf4j.http.client.SPARQLProtocolSession;
 import org.eclipse.rdf4j.http.client.query.AbstractHTTPQuery;
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.MalformedQueryException;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.QueryLanguage;
@@ -39,13 +40,19 @@ public class SPARQLTupleQuery extends AbstractHTTPQuery implements TupleQuery {
 		super(httpClient, QueryLanguage.SPARQL, queryString, baseUri);
 	}
 
+	public SPARQLTupleQuery(SPARQLProtocolSession httpClient, String baseUri, String queryString,
+			VersionLabel qlVersion) {
+		super(httpClient, QueryLanguage.SPARQL, qlVersion, queryString, baseUri);
+	}
+
 	@Override
 	public TupleQueryResult evaluate() throws QueryEvaluationException {
 
 		SPARQLProtocolSession client = getHttpClient();
 		try {
 			return client.sendTupleQuery(QueryLanguage.SPARQL, getQueryString(), baseURI, dataset, getIncludeInferred(),
-					getMaxExecutionTime(), ((WeakReference<?>) null), getBindingsArray());
+					getMaxExecutionTime(), ((WeakReference<?>) null), qlVersion, preferredRDFResultsVersion,
+					getBindingsArray());
 		} catch (IOException | RepositoryException | MalformedQueryException e) {
 			throw new QueryEvaluationException(e.getMessage(), e);
 		}
@@ -58,7 +65,7 @@ public class SPARQLTupleQuery extends AbstractHTTPQuery implements TupleQuery {
 		SPARQLProtocolSession client = getHttpClient();
 		try {
 			client.sendTupleQuery(QueryLanguage.SPARQL, getQueryString(), baseURI, dataset, getIncludeInferred(),
-					getMaxExecutionTime(), handler, getBindingsArray());
+					getMaxExecutionTime(), handler, qlVersion, preferredRDFResultsVersion, getBindingsArray());
 		} catch (IOException | RepositoryException | MalformedQueryException e) {
 			throw new QueryEvaluationException(e.getMessage(), e);
 		}

@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.rdf4j.query;
 
+import org.eclipse.rdf4j.model.util.VersionLabel;
+
 /**
  * An update operation on a repository that can be formulated in one of the supported query languages (for example
  * SPARQL).
@@ -25,4 +27,11 @@ public interface Update extends Operation {
 	 */
 	void execute() throws UpdateExecutionException;
 
+	default VersionLabel getQLVersion() {
+		throw new UnsupportedOperationException();
+	}
+
+	default void setQLVersion(VersionLabel qlVersion) {
+		throw new UnsupportedOperationException();
+	}
 }

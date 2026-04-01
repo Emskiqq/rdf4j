@@ -149,7 +149,9 @@ public class ProxyTest {
 		sparqlSession.setUsernameAndPassword(serverUser, serverPassword);
 
 		// Invoke the test
-		boolean response = sparqlSession.sendBooleanQuery(QueryLanguage.SPARQL, "ASK {}", new SimpleDataset(), false);
+		boolean response = sparqlSession.sendBooleanQuery(QueryLanguage.SPARQL, "ASK {}", new SimpleDataset(), false,
+				null,
+				null);
 
 		// Verifications
 		assertThat(response).isTrue();

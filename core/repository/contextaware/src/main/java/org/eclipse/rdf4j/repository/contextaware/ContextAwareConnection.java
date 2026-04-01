@@ -23,14 +23,8 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.query.BooleanQuery;
-import org.eclipse.rdf4j.query.GraphQuery;
-import org.eclipse.rdf4j.query.MalformedQueryException;
-import org.eclipse.rdf4j.query.Operation;
-import org.eclipse.rdf4j.query.Query;
-import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.TupleQuery;
-import org.eclipse.rdf4j.query.Update;
+import org.eclipse.rdf4j.model.util.VersionLabel;
+import org.eclipse.rdf4j.query.*;
 import org.eclipse.rdf4j.query.impl.SimpleDataset;
 import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
@@ -422,6 +416,16 @@ public class ContextAwareConnection extends RepositoryConnectionWrapper {
 		}
 	}
 
+	@Override
+	public void export(RDFHandler handler, VersionLabel preferredRDFVersion, Resource... contexts)
+			throws RepositoryException, RDFHandlerException {
+		if (isAllContext(contexts)) {
+			super.export(handler, preferredRDFVersion, getReadContexts());
+		} else {
+			super.export(handler, preferredRDFVersion, contexts);
+		}
+	}
+
 	/**
 	 * Exports all statements with a specific subject, predicate and/or object from the repository, optionally from the
 	 * specified contexts.
@@ -453,6 +457,16 @@ public class ContextAwareConnection extends RepositoryConnectionWrapper {
 		}
 	}
 
+	@Override
+	public void exportStatements(Resource subj, IRI pred, Value obj, boolean includeInferred, RDFHandler handler,
+			VersionLabel preferredRDFVersion, Resource... contexts) throws RepositoryException, RDFHandlerException {
+		if (isAllContext(contexts)) {
+			super.exportStatements(subj, pred, obj, includeInferred, handler, preferredRDFVersion, getReadContexts());
+		} else {
+			super.exportStatements(subj, pred, obj, includeInferred, handler, preferredRDFVersion, contexts);
+		}
+	}
+
 	/**
 	 * Gets all statements with a specific subject, predicate and/or object from the repository. The result is
 	 * optionally restricted to the specified set of named contexts.
@@ -476,6 +490,31 @@ public class ContextAwareConnection extends RepositoryConnectionWrapper {
 		}
 	}
 
+	/**
+	 * Gets all statements with a specific subject, predicate and/or object from the repository. The result is
+	 * optionally restricted to the specified set of named contexts.
+	 *
+	 * @param subj                A Resource specifying the subject, or <var>null</var> for a wildcard.
+	 * @param pred                A IRI specifying the predicate, or <var>null</var> for a wildcard.
+	 * @param obj                 A Value specifying the object, or <var>null</var> for a wildcard.
+	 * @param preferredRDFVersion The preferred RDF version of the statements.
+	 * @return The statements matching the specified pattern. The result object is a {@link RepositoryResult} object, a
+	 *         lazy Iterator-like object containing {@link Statement}s and optionally throwing a
+	 *         {@link RepositoryException} when an error when a problem occurs during retrieval.
+	 * @see #getReadContexts()
+	 * @see #isIncludeInferred()
+	 */
+	@Override
+	public RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj,
+			VersionLabel preferredRDFVersion, Resource... contexts)
+			throws RepositoryException {
+		if (isAllContext(contexts)) {
+			return super.getStatements(subj, pred, obj, isIncludeInferred(), preferredRDFVersion, getReadContexts());
+		} else {
+			return super.getStatements(subj, pred, obj, isIncludeInferred(), preferredRDFVersion, contexts);
+		}
+	}
+
 	@Override
 	public RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj, boolean includeInferred,
 			Resource... contexts) throws RepositoryException {
@@ -483,6 +522,16 @@ public class ContextAwareConnection extends RepositoryConnectionWrapper {
 			return super.getStatements(subj, pred, obj, includeInferred, getReadContexts());
 		} else {
 			return super.getStatements(subj, pred, obj, includeInferred, contexts);
+		}
+	}
+
+	@Override
+	public RepositoryResult<Statement> getStatements(Resource subj, IRI pred, Value obj, boolean includeInferred,
+			VersionLabel preferredRDFVersion, Resource... contexts) throws RepositoryException {
+		if (isAllContext(contexts)) {
+			return super.getStatements(subj, pred, obj, includeInferred, preferredRDFVersion, getReadContexts());
+		} else {
+			return super.getStatements(subj, pred, obj, includeInferred, preferredRDFVersion, contexts);
 		}
 	}
 
@@ -599,12 +648,30 @@ public class ContextAwareConnection extends RepositoryConnectionWrapper {
 	}
 
 	@Override
+	public GraphQuery prepareGraphQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		if (baseURI == null) {
+			baseURI = getBaseURI();
+		}
+		return initQuery(super.prepareGraphQuery(ql, qlVersion, query, baseURI));
+	}
+
+	@Override
 	public Query prepareQuery(QueryLanguage ql, String query, String baseURI)
 			throws MalformedQueryException, RepositoryException {
 		if (baseURI == null) {
 			baseURI = getBaseURI();
 		}
 		return initQuery(super.prepareQuery(ql, query, baseURI));
+	}
+
+	@Override
+	public Query prepareQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		if (baseURI == null) {
+			baseURI = getBaseURI();
+		}
+		return initQuery(super.prepareQuery(ql, qlVersion, query, baseURI));
 	}
 
 	@Override
@@ -617,6 +684,15 @@ public class ContextAwareConnection extends RepositoryConnectionWrapper {
 	}
 
 	@Override
+	public TupleQuery prepareTupleQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		if (baseURI == null) {
+			baseURI = getBaseURI();
+		}
+		return initQuery(super.prepareTupleQuery(ql, qlVersion, query, baseURI));
+	}
+
+	@Override
 	public BooleanQuery prepareBooleanQuery(QueryLanguage ql, String query, String baseURI)
 			throws MalformedQueryException, RepositoryException {
 		if (baseURI == null) {
@@ -626,12 +702,30 @@ public class ContextAwareConnection extends RepositoryConnectionWrapper {
 	}
 
 	@Override
+	public BooleanQuery prepareBooleanQuery(QueryLanguage ql, VersionLabel qlVersion, String query, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		if (baseURI == null) {
+			baseURI = getBaseURI();
+		}
+		return initQuery(super.prepareBooleanQuery(ql, qlVersion, query, baseURI));
+	}
+
+	@Override
 	public Update prepareUpdate(QueryLanguage ql, String update, String baseURI)
 			throws MalformedQueryException, RepositoryException {
 		if (baseURI == null) {
 			baseURI = getBaseURI();
 		}
 		return initOperation(super.prepareUpdate(ql, update, baseURI));
+	}
+
+	@Override
+	public Update prepareUpdate(QueryLanguage ql, VersionLabel qlVersion, String update, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		if (baseURI == null) {
+			baseURI = getBaseURI();
+		}
+		return initOperation(super.prepareUpdate(ql, qlVersion, update, baseURI));
 	}
 
 	@Override

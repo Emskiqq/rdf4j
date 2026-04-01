@@ -18,6 +18,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Map;
 
+import org.eclipse.rdf4j.model.util.VersionLabel;
 import org.eclipse.rdf4j.query.GraphQueryResult;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.QueryInterruptedException;
@@ -26,6 +27,7 @@ import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.RDFWriterFactory;
+import org.eclipse.rdf4j.rio.helpers.RDFVersionSettings;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,10 +64,13 @@ public class GraphQueryResultView extends QueryResultView {
 	protected void renderInternal(Map model, HttpServletRequest request, HttpServletResponse response)
 			throws IOException {
 		RDFWriterFactory rdfWriterFactory = (RDFWriterFactory) model.get(FACTORY_KEY);
+		VersionLabel preferredRDFVersion = (VersionLabel) model.get(PREFERRED_OUTPUT_RDF_VERSION);
 		RDFFormat rdfFormat = rdfWriterFactory.getRDFFormat();
 
 		response.setStatus(SC_OK);
-		setContentType(response, rdfFormat);
+		// TODO: Use this or change the version, depending on what approach we decide on: ignore the
+		// version/always return 1.2 or do indeed follow the user's requirements.
+		setContentType(response, rdfFormat, null);
 		setContentDisposition(model, response, rdfFormat);
 
 		boolean headersOnly = (Boolean) model.get(HEADERS_ONLY);
@@ -75,6 +80,8 @@ public class GraphQueryResultView extends QueryResultView {
 				// ensure we handle exceptions _before_ closing the stream
 				try {
 					RDFWriter rdfWriter = rdfWriterFactory.getWriter(out);
+					rdfWriter.getWriterConfig()
+							.set(RDFVersionSettings.PREFERRED_OUTPUT_RDF_VERSION, preferredRDFVersion);
 					GraphQueryResult graphQueryResult = (GraphQueryResult) model.get(QUERY_RESULT_KEY);
 					QueryResults.report(graphQueryResult, rdfWriter);
 				} catch (QueryInterruptedException e) {

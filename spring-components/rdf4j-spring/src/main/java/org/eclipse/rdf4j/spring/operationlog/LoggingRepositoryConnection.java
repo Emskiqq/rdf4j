@@ -23,11 +23,8 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.Value;
-import org.eclipse.rdf4j.query.GraphQuery;
-import org.eclipse.rdf4j.query.MalformedQueryException;
-import org.eclipse.rdf4j.query.QueryLanguage;
-import org.eclipse.rdf4j.query.TupleQuery;
-import org.eclipse.rdf4j.query.Update;
+import org.eclipse.rdf4j.model.util.VersionLabel;
+import org.eclipse.rdf4j.query.*;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.RepositoryException;
 import org.eclipse.rdf4j.repository.RepositoryResult;
@@ -62,6 +59,14 @@ public class LoggingRepositoryConnection extends RepositoryConnectionWrapper {
 	}
 
 	@Override
+	public TupleQuery prepareTupleQuery(QueryLanguage ql, VersionLabel qlVersion, String queryString, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		logWarning();
+		return new LoggingTupleQuery(
+				getDelegate().prepareTupleQuery(ql, qlVersion, queryString, baseURI), operationLog);
+	}
+
+	@Override
 	public TupleQuery prepareTupleQuery(String query)
 			throws RepositoryException, MalformedQueryException {
 		logWarning();
@@ -81,6 +86,14 @@ public class LoggingRepositoryConnection extends RepositoryConnectionWrapper {
 		logWarning();
 		return new LoggingGraphQuery(
 				getDelegate().prepareGraphQuery(ql, queryString, baseURI), operationLog);
+	}
+
+	@Override
+	public GraphQuery prepareGraphQuery(QueryLanguage ql, VersionLabel qlVersion, String queryString, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		logWarning();
+		return new LoggingGraphQuery(
+				getDelegate().prepareGraphQuery(ql, qlVersion, queryString, baseURI), operationLog);
 	}
 
 	@Override
@@ -106,12 +119,30 @@ public class LoggingRepositoryConnection extends RepositoryConnectionWrapper {
 	}
 
 	@Override
+	public Update prepareUpdate(QueryLanguage ql, VersionLabel qlVersion, String updateString, String baseURI)
+			throws MalformedQueryException, RepositoryException {
+		logWarning();
+		return new LoggingUpdate(
+				getDelegate().prepareUpdate(ql, qlVersion, updateString, baseURI), operationLog);
+	}
+
+	@Override
 	public RepositoryResult<Statement> getStatements(
 			Resource subj, IRI pred, Value obj, Resource... contexts) throws RepositoryException {
 		logWarning();
 		return operationLog.runWithLog(
 				PseudoOperation.forGetSatements(subj, pred, obj, contexts),
 				() -> getDelegate().getStatements(subj, pred, obj, contexts));
+	}
+
+	@Override
+	public RepositoryResult<Statement> getStatements(
+			Resource subj, IRI pred, Value obj, VersionLabel preferredRDFVersion, Resource... contexts)
+			throws RepositoryException {
+		logWarning();
+		return operationLog.runWithLog(
+				PseudoOperation.forGetSatements(subj, pred, obj, contexts),
+				() -> getDelegate().getStatements(subj, pred, obj, preferredRDFVersion, contexts));
 	}
 
 	@Override
