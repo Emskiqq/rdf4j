@@ -450,7 +450,6 @@ public class UpdateExprBuilder extends TupleExprBuilder {
 			reifier = mapValueExprToVar(node.getReifier().jjtAccept(this, ret));
 		} else {
 			reifier = createAnonVar();
-			reifier.setBNode(true);
 		}
 		ret.setReifVar(reifier);
 

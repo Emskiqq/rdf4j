@@ -579,7 +579,7 @@ void Describe() :
 	(
 		<STAR> { jjtThis.setWildcard(true); }
 	|
-		( VarOrIRIref() ) +
+		( LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) ConstTripleTerm() | VarOrIRIref() ) +
 	)
 }
 
