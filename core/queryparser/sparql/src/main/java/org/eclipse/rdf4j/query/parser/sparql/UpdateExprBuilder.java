@@ -10,7 +10,9 @@
  *******************************************************************************/
 package org.eclipse.rdf4j.query.parser.sparql;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import org.eclipse.rdf4j.common.annotation.InternalUseOnly;
@@ -316,6 +318,20 @@ public class UpdateExprBuilder extends TupleExprBuilder {
 		ASTInsertClause insertNode = node.getInsertClause();
 		if (insertNode != null) {
 			insert = (TupleExpr) insertNode.jjtAccept(this, data);
+			var tripleBNodes = TripleRefBNodeVarCollector.process(where);
+			if (!tripleBNodes.isEmpty()) {
+				List<ExtensionElem> elems = new ArrayList<>();
+				for (Var tripleBNode : tripleBNodes) {
+					createBNodeExtensionElem(tripleBNode, elems);
+				}
+				Extension ext = prependExtensions(where, elems);
+
+				if (ext == null) {
+					ext = new Extension(where);
+					ext.addElements(elems);
+				}
+				where = ext;
+			}
 		}
 
 		return new Modify(delete, insert, where);
@@ -405,12 +421,6 @@ public class UpdateExprBuilder extends TupleExprBuilder {
 		TripleRef ret = constructTripleRefFromAST(node);
 
 		Extension ext = new Extension(where);
-
-		// Register subject/object blank node vars so they get a BNodeGenerator binding
-		// on first occurrence; subsequent references reuse the same generated bnode value.
-		registerBNodeVarIfNew(ret.getSubjectVar(), ext);
-		registerBNodeVarIfNew(ret.getObjectVar(), ext);
-
 		ext.addElement(new ExtensionElem(castToValueExpr(ret), ret.getExprVar().getName()));
 		where = ext;
 
@@ -454,11 +464,6 @@ public class UpdateExprBuilder extends TupleExprBuilder {
 		ret.setReifVar(reifier);
 
 		Extension ext = new Extension(where);
-		// Register subject/object blank node vars — same semantics as in visit(ASTTripleTerm)
-		registerBNodeVarIfNew(ret.getSubjectVar(), ext);
-		registerBNodeVarIfNew(ret.getObjectVar(), ext);
-		registerBNodeVarIfNew(ret.getReifVar(), ext);
-
 		ext.addElement(new ExtensionElem(castToValueExpr(ret), ret.getExprVar().getName()));
 
 		// Add the reification statement: reifier rdf:reifies <triple-expression>
@@ -469,28 +474,54 @@ public class UpdateExprBuilder extends TupleExprBuilder {
 	}
 
 	/**
-	 * Registers a blank node variable into the given {@link Extension} if it hasn't been registered yet.
+	 * Creates and registers an {@link ExtensionElem} that binds a blank node variable to a {@link BNodeGenerator}, if
+	 * the variable has not been encountered before.
 	 * <p>
-	 * When a blank node variable is first encountered in an update template (INSERT/DELETE), it must be bound to a
-	 * {@link BNodeGenerator} expression via an {@link ExtensionElem}. This ensures the blank node is assigned a fresh,
-	 * unique RDF blank node value at evaluation time, and that subsequent references to the same blank node variable
-	 * resolve to the same generated value within the operation.
+	 * Blank node variables used in SPARQL UPDATE templates (e.g. INSERT or DELETE) must be associated with a
+	 * {@link BNodeGenerator} so that a fresh RDF blank node is produced during evaluation. The generated value is then
+	 * reused for all subsequent references to the same variable within the operation.
 	 * <p>
-	 * The {@code bNodeGenerators} map acts as a registry: if the variable name is already present, the generator has
-	 * already been added to a prior extension in the chain and no duplicate is needed.
+	 * The {@code bNodeGenerators} map acts as a registry of variables that have already been assigned a generator. When
+	 * a variable is first encountered, a new {@link BNodeGenerator} is created and an {@link ExtensionElem} binding is
+	 * added to the supplied list. If the variable was already registered, no additional element is created.
 	 *
-	 * @param var the candidate variable to check
-	 * @param ext the extension to add the {@link BNodeGenerator} binding to, if first occurrence
+	 * @param var   the variable representing a blank node in the update template
+	 * @param elems the list to which a new {@link ExtensionElem} binding should be added if this is the first
+	 *              occurrence of the variable
 	 */
-	private void registerBNodeVarIfNew(Var var, Extension ext) {
-		if (var.isAnonymous() && !var.hasValue() && var.isBNode()) {
-			// computeIfAbsent only creates a new BNodeGenerator on first encounter;
-			// if already present the existing generator is returned but not re-added to the extension.
-			if (!bNodeGenerators.containsKey(var.getName())) {
-				ValueExpr valueExpr = bNodeGenerators.computeIfAbsent(var.getName(),
-						ignored -> new BNodeGenerator());
-				ext.addElement(new ExtensionElem(valueExpr, var.getName()));
-			}
+	private void createBNodeExtensionElem(Var var, List<ExtensionElem> elems) {
+		// computeIfAbsent only creates a new BNodeGenerator on first encounter;
+		// if already present the existing generator is returned but not re-added to the extension.
+		if (!bNodeGenerators.containsKey(var.getName())) {
+			ValueExpr valueExpr = bNodeGenerators.computeIfAbsent(var.getName(),
+					ignored -> new BNodeGenerator());
+			elems.add(new ExtensionElem(valueExpr, var.getName()));
 		}
+	}
+
+	private Extension prependExtensions(TupleExpr expr, List<ExtensionElem> topElems) {
+
+		if (!(expr instanceof Extension)) {
+			return null;
+		}
+
+		List<ExtensionElem> elems = new ArrayList<>();
+		TupleExpr arg = expr;
+
+		// walk down the chain
+		while (arg instanceof Extension) {
+			elems.addAll(0, ((Extension) arg).getElements());
+			arg = ((Extension) arg).getArg();
+		}
+
+		Extension flat = new Extension(arg);
+
+		flat.addElements(topElems);
+
+		for (ExtensionElem e : elems) {
+			flat.addElement(e);
+		}
+
+		return flat;
 	}
 }
