@@ -1618,7 +1618,7 @@ public class DefaultEvaluationStrategy implements EvaluationStrategy, FederatedS
 	 * @return a potentially constant step
 	 */
 	protected QueryValueEvaluationStep supplyUnaryValueEvaluation(UnaryValueOperator node,
-																  java.util.function.Function<Value, Value> operation, QueryEvaluationContext context) {
+			java.util.function.Function<Value, Value> operation, QueryEvaluationContext context) {
 		QueryValueEvaluationStep argStep = precompile(node.getArg(), context);
 		if (argStep.isConstant()) {
 			Value argValue = argStep.evaluate(EmptyBindingSet.getInstance());

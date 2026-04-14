@@ -114,13 +114,13 @@ public class PositiveParserTest extends TestCase {
 
 			// Check equality of the two models
 			if (!Models.isomorphic(inputCollection, outputCollection)) {
-                    logger.error("===models not equal===\n"
-                            + "Expected: " + outputCollection + "\n"
-                            + "Actual  : " + inputCollection + "\n"
-                            + "======================");
-                    fail("models not equal");
-                }
+				logger.error("===models not equal===\n"
+						+ "Expected: " + outputCollection + "\n"
+						+ "Actual  : " + inputCollection + "\n"
+						+ "======================");
+				fail("models not equal");
 			}
 		}
+	}
 
 } // end inner class PositiveParserTest

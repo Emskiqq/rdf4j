@@ -173,30 +173,30 @@ class GraphComparisons {
 		return missingInModel2.isEmpty();
 	}
 
-    private static boolean containsBNodeDeep(Statement st) {
-        if (st.getSubject().isBNode() || st.getObject().isBNode()
-                || st.getContext() instanceof BNode) {
-            return true;
-        }
+	private static boolean containsBNodeDeep(Statement st) {
+		if (st.getSubject().isBNode() || st.getObject().isBNode()
+				|| st.getContext() instanceof BNode) {
+			return true;
+		}
 
-        if (st.getObject().isTripleTerm()) {
-            return tripleContainsBNode((TripleTerm) st.getObject());
-        }
+		if (st.getObject().isTripleTerm()) {
+			return tripleContainsBNode((TripleTerm) st.getObject());
+		}
 
-        return false;
-    }
+		return false;
+	}
 
-    private static boolean tripleContainsBNode(TripleTerm t) {
-        if (t.getSubject().isBNode() || t.getObject().isBNode()) {
-            return true;
-        }
+	private static boolean tripleContainsBNode(TripleTerm t) {
+		if (t.getSubject().isBNode() || t.getObject().isBNode()) {
+			return true;
+		}
 
-        if (t.getObject().isTripleTerm()) {
-            return tripleContainsBNode((TripleTerm) t.getObject());
-        }
+		if (t.getObject().isTripleTerm()) {
+			return tripleContainsBNode((TripleTerm) t.getObject());
+		}
 
-        return false;
-    }
+		return false;
+	}
 
 	private static boolean mappingsIncompatible(Map<BNode, HashCode> mapping1, Map<BNode, HashCode> mapping2) {
 		if (mapping1.size() != mapping2.size()) {

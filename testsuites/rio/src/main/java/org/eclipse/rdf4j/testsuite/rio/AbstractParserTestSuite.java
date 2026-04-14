@@ -94,24 +94,23 @@ public abstract class AbstractParserTestSuite {
 
 		for (final BindingSet bindingSet : queryResult) {
 			final String subManifestFile = bindingSet.getValue("manifestFile").stringValue();
-            final String subManifestFilePath = computeSubManifestFilePath(subManifestFile);
-            final InputStream inputStream = this.getClass().getResourceAsStream(subManifestFilePath);
-            con.add(inputStream, subManifestFile, RDFFormat.TURTLE);
-        }
-    }
+			final String subManifestFilePath = computeSubManifestFilePath(subManifestFile);
+			final InputStream inputStream = this.getClass().getResourceAsStream(subManifestFilePath);
+			con.add(inputStream, subManifestFile, RDFFormat.TURTLE);
+		}
+	}
 
-    /**
-     * Hook method to allow subclasses to customize the path.
-     * By default, only the normal testBaseURL logic is applied.
-     */
-    protected String computeSubManifestFilePath(String subManifestFile) {
-        String subManifestFilePath = "";
-        if (subManifestFile.startsWith(testBaseURL)) {
-            final String relativePath = subManifestFile.substring(testBaseURL.length());
-            subManifestFilePath = testFileBasePath + relativePath;
-        }
-        return subManifestFilePath;
-    }
+	/**
+	 * Hook method to allow subclasses to customize the path. By default, only the normal testBaseURL logic is applied.
+	 */
+	protected String computeSubManifestFilePath(String subManifestFile) {
+		String subManifestFilePath = "";
+		if (subManifestFile.startsWith(testBaseURL)) {
+			final String relativePath = subManifestFile.substring(testBaseURL.length());
+			subManifestFilePath = testFileBasePath + relativePath;
+		}
+		return subManifestFilePath;
+	}
 
 	private void parsePositiveSyntaxTests(final TestSuite suite, final RepositoryConnection con) {
 		StringBuilder positiveQuery = new StringBuilder();

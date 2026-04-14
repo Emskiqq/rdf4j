@@ -1100,8 +1100,8 @@ public class RDFXMLParser extends XMLReaderBasedParser implements ErrorHandler {
 			if (dir == null) {
 				dir = getDefaultBaseDirection();
 			}
-            // Ignore its:dir if lang already specifies direction
-            boolean langSpecifiesDir = lang != null && (lang.endsWith("--ltr") || lang.endsWith("--rtl"));
+			// Ignore its:dir if lang already specifies direction
+			boolean langSpecifiesDir = lang != null && (lang.endsWith("--ltr") || lang.endsWith("--rtl"));
 			if (dir != null && lang != null && !langSpecifiesDir) {
 				try {
 					if ("ltr".equals(dir)) {
