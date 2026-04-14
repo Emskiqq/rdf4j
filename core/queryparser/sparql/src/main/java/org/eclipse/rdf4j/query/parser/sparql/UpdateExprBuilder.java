@@ -438,7 +438,11 @@ public class UpdateExprBuilder extends TupleExprBuilder {
 		// Recursively handle nested reified triples in subject position
 		if (subjNode instanceof ASTReifiedTriple) {
 			ReifiedTripleRef nestedRef = new ReifiedTripleRef();
-			ret.setSubjectVar(mapValueExprToVar(subjNode.jjtAccept(this, nestedRef)));
+			var retSubj = mapValueExprToVar(subjNode.jjtAccept(this, nestedRef));
+			// Mark nested reifier as blank node so it gets collected
+			// by TripleRefBNodeVarCollector and bound to a BNodeGenerator in INSERT/WHERE
+			retSubj.setBNode(true);
+			ret.setSubjectVar(retSubj);
 		} else {
 			ret.setSubjectVar(mapValueExprToVar(subjNode.jjtAccept(this, data)));
 		}
@@ -448,7 +452,11 @@ public class UpdateExprBuilder extends TupleExprBuilder {
 		// Recursively handle nested reified triples in object position
 		if (objNode instanceof ASTReifiedTriple) {
 			ReifiedTripleRef nestedRef = new ReifiedTripleRef();
-			ret.setObjectVar(mapValueExprToVar(objNode.jjtAccept(this, nestedRef)));
+			var retObj = mapValueExprToVar(objNode.jjtAccept(this, nestedRef));
+			// Mark nested reifier as blank node so it gets collected
+			// by TripleRefBNodeVarCollector and bound to a BNodeGenerator in INSERT/WHERE
+			retObj.setBNode(true);
+			ret.setObjectVar(retObj);
 		} else {
 			ret.setObjectVar(mapValueExprToVar(objNode.jjtAccept(this, ret)));
 		}

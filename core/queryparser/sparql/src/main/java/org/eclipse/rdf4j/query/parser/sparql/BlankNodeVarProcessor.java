@@ -142,6 +142,9 @@ public class BlankNodeVarProcessor extends AbstractASTVisitor {
 					ASTVar varNode = new ASTVar(SyntaxTreeBuilderTreeConstants.JJTVAR);
 					varNode.setName(varName);
 					varNode.setAnonymous(true);
+					// Mark nested reifier as blank node so it gets collected
+					// by TripleRefBNodeVarCollector and bound to a BNodeGenerator in INSERT/WHERE
+					varNode.setIsBNode(true);
 					bn.jjtReplaceWith(varNode);
 				} else {
 					reifier.jjtAccept(this, data);
@@ -203,6 +206,8 @@ public class BlankNodeVarProcessor extends AbstractASTVisitor {
 		private void processBlankNodeOrRecurse(SimpleNode bn, Object data) throws VisitorException {
 			if (bn instanceof ASTBlankNode) {
 				var bNodeVar = convertBlankNodeToVar((ASTBlankNode) bn);
+				// Mark var as blank node so it gets collected by TripleRefBNodeVarCollector
+				// and bound to a BNodeGenerator in INSERT/WHERE
 				bNodeVar.setIsBNode(true);
 			} else {
 				bn.jjtAccept(this, data);
