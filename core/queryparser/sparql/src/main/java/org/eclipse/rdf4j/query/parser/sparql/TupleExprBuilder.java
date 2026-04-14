@@ -2440,7 +2440,27 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 	public Object visit(ASTBind node, Object data) throws VisitorException {
 		// bind expression
 		Object child0 = node.jjtGetChild(0).jjtAccept(this, data);
-		ValueExpr ve = castToValueExpr(child0);
+		ValueExpr ve;
+		if (child0 instanceof ValueExpr) {
+			ve = castToValueExpr(child0);
+		} else if (child0 instanceof TripleRef) {
+			TripleRef tripleRef = (TripleRef) child0;
+
+			// Check if all triple term variables are bound in preceding patterns
+			Set<Var> boundVars = collectBoundVars(graphPattern.getRequiredTEs());
+			Set<Var> tripleTermVars = getTripleRefVars(tripleRef);
+
+			if (boundVars.containsAll(tripleTermVars)) {
+				// All vars bound - expand to ValueExprTripleRef
+				ve = castToValueExpr(child0);
+			} else {
+				// Some vars unbound - use simple var reference
+				graphPattern.addRequiredTE(tripleRef);
+				ve = ((TripleRef) child0).getExprVar();
+			}
+		} else {
+			ve = null;
+		}
 		if (ve == null) {
 			throw new IllegalArgumentException("Unexpected expression on bind");
 		}
@@ -2875,6 +2895,33 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 		ret.setObjectVar(mapValueExprToVar(obj.jjtAccept(this, ret)));
 		ret.setExprVar(createAnonVar());
 		return ret;
+	}
+
+	private Set<Var> collectBoundVars(List<TupleExpr> requiredTEs) {
+		Set<Var> bound = new HashSet<>();
+		for (TupleExpr te : requiredTEs) {
+			if (te instanceof StatementPattern) {
+				StatementPattern sp = (StatementPattern) te;
+				addIfVar(bound, sp.getSubjectVar());
+				addIfVar(bound, sp.getPredicateVar());
+				addIfVar(bound, sp.getObjectVar());
+			}
+		}
+		return bound;
+	}
+
+	private void addIfVar(Set<Var> vars, Var var) {
+		if (var != null && !var.hasValue()) {
+			vars.add(var);
+		}
+	}
+
+	private Set<Var> getTripleRefVars(TripleRef t) {
+		Set<Var> vars = new HashSet<>();
+		addIfVar(vars, t.getSubjectVar());
+		addIfVar(vars, t.getPredicateVar());
+		addIfVar(vars, t.getObjectVar());
+		return vars;
 	}
 
 	/**
