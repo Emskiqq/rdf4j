@@ -101,8 +101,6 @@ public class TurtleWriter extends AbstractRDFWriter implements CharSink {
 
 	private ModelFactory modelFactory = new LinkedHashModelFactory();
 
-	private boolean versionPrinted = false;
-
 	/**
 	 * Creates a new TurtleWriter that will write to the supplied OutputStream.
 	 *
@@ -305,19 +303,9 @@ public class TurtleWriter extends AbstractRDFWriter implements CharSink {
 		IRI pred = st.getPredicate();
 		Value obj = st.getObject();
 
-		if (!versionPrinted) {
-			if (usesVersion12(obj)) {
-				try {
-					// If we're in the middle of writing a structure, close it first
-					if (!statementClosed || !stack.isEmpty()) {
-						closePreviousStatement();
-					}
-					writeVersion();
-				} catch (IOException e) {
-					throw new RDFHandlerException(e);
-				}
-			}
-		}
+		// ── RDF 1.2 version announcement (streaming path) ──────────────────────
+		noteRdf12Feature(subj, obj);
+		ensureVersionAnnouncement();
 
 		try {
 			if (inlineBNodes) {
@@ -483,10 +471,34 @@ public class TurtleWriter extends AbstractRDFWriter implements CharSink {
 		writer.writeEOL();
 	}
 
-	protected void writeVersion() throws IOException {
-		writer.write("VERSION \"1.2\"");
-		writer.writeEOL();
-		versionPrinted = true;
+	@Override
+	protected boolean requiresVersionAnnouncement() {
+		return true;
+	}
+
+	/**
+	 * Closes any open predicate-object list or blank-node structure before the version directive is written. Called by
+	 * {@link #ensureVersionAnnouncement()}.
+	 */
+	@Override
+	protected void prepareForVersionAnnouncement() throws RDFHandlerException {
+		try {
+			if (!statementClosed || !stack.isEmpty()) {
+				closePreviousStatement();
+			}
+		} catch (IOException e) {
+			throw new RDFHandlerException(e);
+		}
+	}
+
+	@Override
+	protected void writeVersionAnnouncement() throws RDFHandlerException {
+		try {
+			writer.write("VERSION \"1.2\"");
+			writer.writeEOL();
+		} catch (IOException e) {
+			throw new RDFHandlerException(e);
+		}
 	}
 
 	protected void writePredicate(IRI predicate) throws IOException {
@@ -858,13 +870,24 @@ public class TurtleWriter extends AbstractRDFWriter implements CharSink {
 			return;
 		}
 
-		if (!versionPrinted && bufferedStatements.objects().stream().anyMatch(o -> usesVersion12(o))) {
-			try {
-				writeVersion();
-			} catch (IOException e) {
-				throw new RDFHandlerException(e);
+		// ── RDF 1.2 version announcement (buffering path) ──────────────────────
+		// Scan all buffered subjects and objects because the flag may not have
+		// been set yet (statements were buffered, not streamed one-by-one).
+		for (Value obj : bufferedStatements.objects()) {
+			if (isRdf12Feature(obj)) {
+				noteRdf12Feature(obj);
+				break;
 			}
 		}
+		if (!isRdf12FeatureDetected()) {
+			for (Value subj : bufferedStatements.subjects()) {
+				if (isRdf12Feature(subj)) {
+					noteRdf12Feature(subj);
+					break;
+				}
+			}
+		}
+		ensureVersionAnnouncement();
 
 		if (this.getRDFFormat().supportsContexts()) { // to allow use in Turtle extensions such a TriG
 			// primary grouping per context.
@@ -965,10 +988,6 @@ public class TurtleWriter extends AbstractRDFWriter implements CharSink {
 	 */
 	private boolean isBuffering() {
 		return inlineBNodes || prettyPrint;
-	}
-
-	private static boolean usesVersion12(Value v) {
-		return v.isTripleTerm() || (v.isLiteral() && ((Literal) v).getDatatype() == RDF.DIRLANGSTRING);
 	}
 
 }

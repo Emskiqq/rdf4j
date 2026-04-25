@@ -81,6 +81,25 @@ public class NTriplesWriter extends AbstractRDFWriter implements CharSink {
 	}
 
 	@Override
+	protected boolean requiresVersionAnnouncement() {
+		return true;
+	}
+
+	/**
+	 * Writes the N-Triples / N-Quads version directive as the very first output line once an RDF 1.2 feature is
+	 * detected. Per the RDF 1.2 N-Triples specification, this must appear before any triple that uses a
+	 * version-dependent feature.
+	 */
+	@Override
+	protected void writeVersionAnnouncement() throws RDFHandlerException {
+		try {
+			writer.write("VERSION \"1.2\"\n");
+		} catch (IOException e) {
+			throw new RDFHandlerException(e);
+		}
+	}
+
+	@Override
 	public void endRDF() throws RDFHandlerException {
 		checkWritingStarted();
 		try {
@@ -99,6 +118,11 @@ public class NTriplesWriter extends AbstractRDFWriter implements CharSink {
 	@Override
 	protected void consumeStatement(Statement st) {
 		try {
+			// Detect RDF 1.2 features and emit version announcement before
+			// the first affected triple is written (pure streaming — no buffering).
+			noteRdf12Feature(st.getSubject(), st.getObject());
+			ensureVersionAnnouncement();
+
 			writeValue(st.getSubject());
 			writer.write(" ");
 			writeIRI(st.getPredicate());
