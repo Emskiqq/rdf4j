@@ -579,7 +579,7 @@ void Describe() :
 	(
 		<STAR> { jjtThis.setWildcard(true); }
 	|
-		( LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) ConstTripleTerm() | VarOrIRIref() ) +
+		( ConstTripleTerm() | VarOrIRIref() ) +
 	)
 }
 
@@ -868,7 +868,7 @@ void ArgList() #void :
 void ValueExpression() #void :
 {}
 {
-    LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) ConstTripleTerm() | ConditionalOrExpression()
+    ConstTripleTerm() | ConditionalOrExpression()
 }
 
 void TriplesSameSubject() :
@@ -883,14 +883,11 @@ void PropertyList() :
 {}
 {
 	Verb() ObjectList()
-    ( LOOKAHEAD(<TILDE> | <ANNOTATION_OPEN>)
-        (
-            <TILDE> ( IRIref() | BlankNode() | Var() )
-            |
-            <ANNOTATION_OPEN>
-                PropertyList() { ((ASTPropertyList)jjtree.peekNode()).setAnnotation(true); }
-            <ANNOTATION_CLOSE>
-        )
+        (<TILDE> ( IRIref() | BlankNode() | Var() )
+        |
+        <ANNOTATION_OPEN>
+            PropertyList() { ((ASTPropertyList)jjtree.peekNode()).setAnnotation(true); }
+        <ANNOTATION_CLOSE>
     )*
 	[ <SEMICOLON> [PropertyList()] ]
 }
@@ -917,14 +914,12 @@ void PropertyListPath() :
 {}
 {
     (VerbPath() | VerbSimple()) ObjectListPath()
-    ( LOOKAHEAD(<TILDE> | <ANNOTATION_OPEN>)
-        (
-            <TILDE> ( IRIref() | BlankNode() )
-            |
-            <ANNOTATION_OPEN>
-                PropertyListPath() { ((ASTPropertyListPath)jjtree.peekNode()).setAnnotation(true); }
-            <ANNOTATION_CLOSE>
-        )
+        (<TILDE> ( IRIref() | BlankNode() )
+        |
+        <ANNOTATION_OPEN>
+            PropertyListPath() { ((ASTPropertyListPath)jjtree.peekNode()).setAnnotation(true); }
+        <ANNOTATION_CLOSE>
+
     )*
     [<SEMICOLON> [PropertyListPath()] ]
 }
@@ -1201,7 +1196,7 @@ void ReifiedTripleSubject() #void :
 void Expression() #void :
 {}
 {
-	LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) LabeledTripleTerm() | ConditionalOrExpression()
+	LabeledTripleTerm() | ConditionalOrExpression()
 }
 
 void ConditionalOrExpression() #void :
