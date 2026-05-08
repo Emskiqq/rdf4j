@@ -159,9 +159,13 @@ public class TriGWriter extends TurtleWriter {
 	}
 
 	@Override
-	protected void writeVersion() throws IOException {
-		closeActiveContext();
-		super.writeVersion();
+	protected void writeVersionAnnouncement() throws RDFHandlerException {
+		try {
+			closeActiveContext();
+		} catch (IOException e) {
+			throw new RDFHandlerException(e);
+		}
+		super.writeVersionAnnouncement();
 	}
 
 	protected void closeActiveContext() throws IOException {

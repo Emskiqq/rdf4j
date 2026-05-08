@@ -18,11 +18,13 @@ import java.util.function.Consumer;
 
 import org.eclipse.rdf4j.common.io.Sink;
 import org.eclipse.rdf4j.common.lang.FileFormat;
+import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.TripleTerm;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.util.Statements;
+import org.eclipse.rdf4j.model.vocabulary.RDF;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
 import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.RioSetting;
@@ -46,6 +48,15 @@ public abstract class AbstractRDFWriter implements RDFWriter, Sink {
 	private WriterConfig writerConfig = new WriterConfig();
 
 	private boolean writingStarted;
+	/**
+	 * True once at least one RDF 1.2-specific feature (triple term or directional literal) has been observed in the
+	 * incoming stream.
+	 */
+	private boolean rdf12FeatureDetected;
+	/**
+	 * True once the version announcement has been written to the output stream.
+	 */
+	private boolean versionAnnouncementWritten;
 
 	protected Consumer<Statement> statementConsumer;
 
@@ -140,6 +151,101 @@ public abstract class AbstractRDFWriter implements RDFWriter, Sink {
 		if (!writingStarted) {
 			throw new RDFHandlerException("Document writing has not started yet");
 		}
+	}
+
+	/**
+	 * Returns {@code true} if the given {@link Value} requires an RDF 1.2 version announcement (i.e. it is a triple
+	 * term or a directional language-tagged literal).
+	 *
+	 * @param v the value to test – may be {@code null}, in which case {@code false} is returned.
+	 */
+	public static boolean isRdf12Feature(Value v) {
+		if (v == null) {
+			return false;
+		}
+		return v.isTripleTerm()
+				|| (v.isLiteral() && RDF.DIRLANGSTRING.equals(((Literal) v).getDatatype()));
+	}
+
+	/**
+	 * Records that an RDF 1.2-specific feature was observed in {@code values}. Has no effect once the first feature has
+	 * already been noted.
+	 *
+	 * @param values zero or more {@link Value}s to inspect.
+	 */
+	protected void noteRdf12Feature(Value... values) {
+		if (!rdf12FeatureDetected) {
+			for (Value v : values) {
+				if (isRdf12Feature(v)) {
+					rdf12FeatureDetected = true;
+					return;
+				}
+			}
+		}
+	}
+
+	/**
+	 * Returns {@code true} if at least one RDF 1.2-specific feature has been noted so far.
+	 */
+	protected boolean isRdf12FeatureDetected() {
+		return rdf12FeatureDetected;
+	}
+
+	/**
+	 * Returns {@code true} if the version announcement has already been written to the output stream.
+	 */
+	protected boolean isVersionAnnouncementWritten() {
+		return versionAnnouncementWritten;
+	}
+
+	/**
+	 * Override to return {@code true} for writers where an inline version announcement is mandatory when RDF
+	 * 1.2-specific features are serialised (Turtle, TriG, N3, N-Triples, N-Quads).
+	 * <p>
+	 * Returns {@code false} by default (JSON-LD, RDF/JSON, NDJSON-LD writers keep it optional).
+	 */
+	protected boolean requiresVersionAnnouncement() {
+		return false;
+	}
+
+	/**
+	 * Called by {@link #ensureVersionAnnouncement()} immediately before {@link #writeVersionAnnouncement()}. Override
+	 * to flush / close any open output structure that must not straddle the version directive (e.g. TurtleWriter closes
+	 * an open predicate-object list).
+	 * <p>
+	 * Default implementation is a no-op.
+	 */
+	protected void prepareForVersionAnnouncement() throws RDFHandlerException {
+		// no-op; subclasses may override
+	}
+
+	/**
+	 * Writes the format-specific version directive to the output stream. Called at most once per document, by
+	 * {@link #ensureVersionAnnouncement()}.
+	 * <p>
+	 * Default implementation is a no-op; concrete writers must override this.
+	 */
+	protected void writeVersionAnnouncement() throws RDFHandlerException {
+		// no-op; subclasses override
+	}
+
+	/**
+	 * Emits the version announcement if — and only if — all of the following hold:
+	 * <ul>
+	 * <li>at least one RDF 1.2 feature has been observed ({@link #noteRdf12Feature});</li>
+	 * <li>the announcement has not been written yet;</li>
+	 * <li>{@link #requiresVersionAnnouncement()} returns {@code true}.</li>
+	 * </ul>
+	 * Calls {@link #prepareForVersionAnnouncement()} before writing to let writers close any open output structure
+	 * first.
+	 */
+	protected final void ensureVersionAnnouncement() throws RDFHandlerException {
+		if (!rdf12FeatureDetected || versionAnnouncementWritten || !requiresVersionAnnouncement()) {
+			return;
+		}
+		prepareForVersionAnnouncement();
+		writeVersionAnnouncement();
+		versionAnnouncementWritten = true;
 	}
 
 	private void handleStatementConvertTripleTerms(Statement st) {
