@@ -25,15 +25,15 @@ import org.eclipse.rdf4j.testsuite.query.resultio.AbstractQueryResultIOTupleTest
 /**
  * @author Pavel Mihaylov
  */
-public class SPARQLStarJSONTupleBackgroundTest extends AbstractQueryResultIOTupleTest {
+public class SPARQLTripleTermJSONTupleBackgroundTest extends AbstractQueryResultIOTupleTest {
 	@Override
 	protected String getFileName() {
-		return "test.srjs";
+		return "test.srj";
 	}
 
 	@Override
 	protected TupleQueryResultFormat getTupleFormat() {
-		return TupleQueryResultFormat.JSON_STAR;
+		return TupleQueryResultFormat.JSON;
 	}
 
 	@Override

@@ -15,27 +15,26 @@ import org.eclipse.rdf4j.query.resultio.TupleQueryResultWriterFactory;
 import org.eclipse.rdf4j.rio.RioSetting;
 import org.eclipse.rdf4j.rio.helpers.BasicWriterSettings;
 import org.eclipse.rdf4j.testsuite.query.resultio.AbstractTupleQueryResultWriterTest;
-import org.junit.jupiter.api.Disabled;
 
 /**
  * @author Jeen Broekstra
  */
-public class SPARQLStarTSVTupleQueryResultWriterTest extends AbstractTupleQueryResultWriterTest {
+public class SPARQLTripleTermTSVTupleQueryResultWriterTest extends AbstractTupleQueryResultWriterTest {
 
 	@Override
 	protected TupleQueryResultParserFactory getParserFactory() {
-		return new SPARQLStarResultsTSVParserFactory();
+		return new SPARQLResultsTSVParserFactory();
 	}
 
 	@Override
 	protected TupleQueryResultWriterFactory getWriterFactory() {
-		return new SPARQLStarResultsTSVWriterFactory();
+		return new SPARQLResultsTSVWriterFactory();
 	}
 
 	@Override
 	protected RioSetting<?>[] getExpectedSupportedSettings() {
 		return new RioSetting<?>[] {
-				BasicWriterSettings.ENCODE_TRIPLE_TERMS,
+				BasicWriterSettings.ENCODE_TRIPLE_TERMS, // TODO: again, decide on this.
 				BasicWriterSettings.XSD_STRING_TO_PLAIN_LITERAL
 		};
 	}

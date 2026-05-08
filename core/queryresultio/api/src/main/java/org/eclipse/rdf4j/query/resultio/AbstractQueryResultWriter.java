@@ -59,7 +59,7 @@ public abstract class AbstractQueryResultWriter implements QueryResultWriter, Si
 		// Formats without native RDF 1.2 support obey the ENCODE_TRIPLE_TERMS setting and may encode RDF 1.2 triples to
 		// IRIs
 		encodeTripleTerms = this instanceof TupleQueryResultWriter
-				&& !((TupleQueryResultWriter) this).getTupleQueryResultFormat().supportsRDFStar()
+				&& !((TupleQueryResultWriter) this).getTupleQueryResultFormat().supportsTripleTerms()
 				&& getWriterConfig().get(BasicWriterSettings.ENCODE_TRIPLE_TERMS);
 	}
 

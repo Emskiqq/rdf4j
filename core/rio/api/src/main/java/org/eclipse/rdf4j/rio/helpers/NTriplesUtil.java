@@ -11,6 +11,7 @@
 package org.eclipse.rdf4j.rio.helpers;
 
 import java.io.IOException;
+import java.util.function.Function;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -50,18 +51,29 @@ public class NTriplesUtil {
 	private static final String LANGTAG = "@[a-zA-Z]+(?:-[a-zA-Z0-9]+)*";
 	private static final String LITERAL = STRING_LITERAL_QUOTE + "(?:\\^\\^" + IRI + "|" + LANGTAG + ")?";
 
+	private static final String NUMBER = "^[-+]?(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][-+]?\\d+)?";
+
 	private static final Pattern BNODE_ID_PATTERN = Pattern.compile(BNODE_ID);
-	private static final Pattern BNODE_PATTERN = Pattern.compile(BNODE);
+	public static final Pattern BNODE_PATTERN = Pattern.compile(BNODE);
 	private static final Pattern IRI_PATTERN = Pattern.compile(IRI);
 	private static final Pattern LITERAL_PATTERN = Pattern.compile(LITERAL);
+	private static final Pattern NUMBER_PATTERN = Pattern.compile(NUMBER);
 
-	static class TripleMatch {
+	public static class TripleMatch {
 		TripleTerm tripleTerm;
 		int length;
 
-		TripleMatch(TripleTerm tripleTerm, int length) {
+		public TripleMatch(TripleTerm tripleTerm, int length) {
 			this.tripleTerm = tripleTerm;
 			this.length = length;
+		}
+
+		public TripleTerm getTripleTerm() {
+			return tripleTerm;
+		}
+
+		public int getLength() {
+			return length;
 		}
 	}
 
@@ -195,7 +207,23 @@ public class NTriplesUtil {
 	 * @throws IllegalArgumentException If the supplied tripleTerm could not be parsed correctly.
 	 */
 	public static TripleTerm parseTriple(String nTriplesTriple, ValueFactory valueFactory) {
-		TripleMatch tm = parseTripleInternal(nTriplesTriple, valueFactory);
+		return parseTriple(nTriplesTriple, valueFactory, null);
+	}
+
+	/**
+	 * Parses a tripleterm, creates an object for it using the supplied ValueFactory and number parse approach, and
+	 * returns this object.
+	 *
+	 * @param nTriplesTriple      The triple term to parse.
+	 * @param valueFactory        The ValueFactory to use for creating the object.
+	 * @param parseNumberFunction The function receiving a String and returning a Value, which handles number parse if
+	 *                            the number doesn't provide a datatype.
+	 * @return An object representing the parsed tripleTerm.
+	 * @throws IllegalArgumentException If the supplied tripleTerm could not be parsed correctly.
+	 */
+	public static TripleTerm parseTriple(String nTriplesTriple, ValueFactory valueFactory,
+			Function<String, Value> parseNumberFunction) {
+		TripleMatch tm = parseTripleInternal(nTriplesTriple, valueFactory, parseNumberFunction);
 		if (tm.length != nTriplesTriple.length()) {
 			throw new IllegalArgumentException("Not a valid N-Triples tripleTerm: " + nTriplesTriple);
 		}
@@ -206,12 +234,14 @@ public class NTriplesUtil {
 	 * Parses a triple term, creates an object for it using the supplied ValueFactory and returns an object that
 	 * contains the parsed triple and the length of the parsed text.
 	 *
-	 * @param nTriplesTriple The tripleTerm to parse.
-	 * @param valueFactory   The ValueFactory to use for creating the object.
+	 * @param nTriplesTriple      The tripleTerm to parse.
+	 * @param valueFactory        The ValueFactory to use for creating the object.
+	 * @param parseNumberFunction The method for parsing a number if no datatype is provided.
 	 * @return An object representing the parsed tripleTerm and the length of the matching text.
 	 * @throws IllegalArgumentException If the supplied tripleTerm could not be parsed correctly.
 	 */
-	private static TripleMatch parseTripleInternal(String nTriplesTriple, ValueFactory valueFactory) {
+	private static TripleMatch parseTripleInternal(String nTriplesTriple, ValueFactory valueFactory,
+			Function<String, Value> parseNumberFunction) {
 		if (nTriplesTriple.startsWith("<<(")) {
 			String triple = nTriplesTriple.substring(3);
 			int offset = 3;
@@ -236,7 +266,7 @@ public class NTriplesUtil {
 						offset += bNodeMatcher.end();
 					}
 				} else if (triple.startsWith("<<(")) {
-					TripleMatch tm = parseTripleInternal(triple, valueFactory);
+					TripleMatch tm = parseTripleInternal(triple, valueFactory, parseNumberFunction);
 					triple = triple.substring(tm.length);
 					offset += tm.length;
 					v = tm.tripleTerm;
@@ -255,6 +285,14 @@ public class NTriplesUtil {
 						v = NTriplesUtil.parseLiteral(value, valueFactory);
 						triple = triple.substring(literalMatcher.end());
 						offset += literalMatcher.end();
+					}
+				} else if (!triple.isEmpty()) {
+					Matcher numberMatcher = NUMBER_PATTERN.matcher(triple);
+					if (numberMatcher.find() && numberMatcher.start() == 0) {
+						String value = numberMatcher.group();
+						v = parseNumberFunction.apply(value);
+						triple = triple.substring(numberMatcher.end());
+						offset += numberMatcher.end();
 					}
 				}
 

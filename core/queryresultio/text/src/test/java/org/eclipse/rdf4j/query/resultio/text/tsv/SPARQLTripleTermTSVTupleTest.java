@@ -10,29 +10,26 @@
  *******************************************************************************/
 package org.eclipse.rdf4j.query.resultio.text.tsv;
 
+import org.eclipse.rdf4j.query.resultio.BooleanQueryResultFormat;
 import org.eclipse.rdf4j.query.resultio.TupleQueryResultFormat;
-import org.eclipse.rdf4j.query.resultio.TupleQueryResultParser;
-import org.eclipse.rdf4j.query.resultio.TupleQueryResultParserFactory;
+import org.eclipse.rdf4j.testsuite.query.resultio.AbstractQueryResultIOTupleTest;
 
 /**
- * {@link TupleQueryResultParserFactory} for creating instances of {@link SPARQLStarResultsTSVParser}.
- *
  * @author Pavel Mihaylov
  */
-public class SPARQLStarResultsTSVParserFactory implements TupleQueryResultParserFactory {
-	/**
-	 * Returns {@link TupleQueryResultFormat#TSV_STAR}.
-	 */
+public class SPARQLTripleTermTSVTupleTest extends AbstractQueryResultIOTupleTest {
 	@Override
-	public TupleQueryResultFormat getTupleQueryResultFormat() {
-		return TupleQueryResultFormat.TSV_STAR;
+	protected String getFileName() {
+		return "test.tsv";
 	}
 
-	/**
-	 * Returns a new instance of {@link SPARQLStarResultsTSVParser}.
-	 */
 	@Override
-	public TupleQueryResultParser getParser() {
-		return new SPARQLStarResultsTSVParser();
+	protected TupleQueryResultFormat getTupleFormat() {
+		return TupleQueryResultFormat.TSV;
+	}
+
+	@Override
+	protected BooleanQueryResultFormat getMatchingBooleanFormatOrNull() {
+		return null;
 	}
 }

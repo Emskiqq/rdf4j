@@ -21,8 +21,8 @@ import org.eclipse.rdf4j.query.TupleQueryResultHandlerException;
 import org.eclipse.rdf4j.rio.helpers.TripleTermUtil;
 
 /**
- * A {@link QueryResultHandler} that delegates all results to another handler and processes RDF-star triples encoded as
- * special IRIs back to RDF-star triple values.
+ * A {@link QueryResultHandler} that delegates all results to another handler and processes RDF triple terms encoded as
+ * special IRIs back to RDF triple term values.
  *
  * @author Pavel Mihaylov
  */
