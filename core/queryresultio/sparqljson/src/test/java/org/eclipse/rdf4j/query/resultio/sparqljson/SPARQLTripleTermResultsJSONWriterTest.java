@@ -8,39 +8,34 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
-package org.eclipse.rdf4j.query.resultio.sparqlxml;
+package org.eclipse.rdf4j.query.resultio.sparqljson;
 
 import org.eclipse.rdf4j.query.resultio.BasicQueryWriterSettings;
 import org.eclipse.rdf4j.query.resultio.TupleQueryResultParserFactory;
 import org.eclipse.rdf4j.query.resultio.TupleQueryResultWriterFactory;
 import org.eclipse.rdf4j.rio.RioSetting;
 import org.eclipse.rdf4j.rio.helpers.BasicWriterSettings;
-import org.eclipse.rdf4j.rio.helpers.XMLWriterSettings;
 import org.eclipse.rdf4j.testsuite.query.resultio.AbstractTupleQueryResultWriterTest;
 
-/**
- * @author Jeen Broekstra
- */
-public class SPARQLStarXMLTupleQueryResultWriterTest extends AbstractTupleQueryResultWriterTest {
+public class SPARQLTripleTermResultsJSONWriterTest extends AbstractTupleQueryResultWriterTest {
 
 	@Override
 	protected TupleQueryResultParserFactory getParserFactory() {
-		return new SPARQLStarResultsXMLParserFactory();
+		return new SPARQLResultsJSONParserFactory();
 	}
 
 	@Override
 	protected TupleQueryResultWriterFactory getWriterFactory() {
-		return new SPARQLStarResultsXMLWriterFactory();
+		return new SPARQLResultsJSONWriterFactory();
 	}
 
 	@Override
 	protected RioSetting<?>[] getExpectedSupportedSettings() {
 		return new RioSetting<?>[] {
-				BasicQueryWriterSettings.ADD_SESAME_QNAME,
 				BasicWriterSettings.PRETTY_PRINT,
 				BasicWriterSettings.XSD_STRING_TO_PLAIN_LITERAL,
 				BasicWriterSettings.ENCODE_TRIPLE_TERMS,
-				XMLWriterSettings.INCLUDE_XML_PI
+				BasicQueryWriterSettings.JSONP_CALLBACK
 		};
 	}
 }

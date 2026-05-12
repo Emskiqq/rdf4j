@@ -8,7 +8,7 @@
  *
  * SPDX-License-Identifier: BSD-3-Clause
  *******************************************************************************/
-package org.eclipse.rdf4j.query.resultio.sparqlxml;
+package org.eclipse.rdf4j.query.resultio.text.tsv;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -23,23 +23,23 @@ import org.eclipse.rdf4j.query.resultio.UnsupportedQueryResultFormatException;
 import org.eclipse.rdf4j.testsuite.query.resultio.AbstractQueryResultIOTupleTest;
 
 /**
- * @author Jeen Broekstra
+ * @author Pavel Mihaylov
  */
-public class SPARQLStarXMLTupleBackgroundTest extends AbstractQueryResultIOTupleTest {
+public class SPARQLTripleTermTSVTupleBackgroundTest extends AbstractQueryResultIOTupleTest {
 
 	@Override
 	protected String getFileName() {
-		return "test.srxs";
+		return "test.tsv";
 	}
 
 	@Override
 	protected TupleQueryResultFormat getTupleFormat() {
-		return TupleQueryResultFormat.SPARQL_STAR;
+		return TupleQueryResultFormat.TSV;
 	}
 
 	@Override
 	protected BooleanQueryResultFormat getMatchingBooleanFormatOrNull() {
-		return BooleanQueryResultFormat.SPARQL;
+		return null;
 	}
 
 	@Override
@@ -47,5 +47,4 @@ public class SPARQLStarXMLTupleBackgroundTest extends AbstractQueryResultIOTuple
 			QueryResultParseException, TupleQueryResultHandlerException, UnsupportedQueryResultFormatException {
 		return QueryResultIO.parseTupleBackground(in, format, null);
 	}
-
 }

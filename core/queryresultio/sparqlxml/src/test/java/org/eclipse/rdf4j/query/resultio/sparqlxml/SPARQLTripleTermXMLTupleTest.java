@@ -17,16 +17,16 @@ import org.eclipse.rdf4j.testsuite.query.resultio.AbstractQueryResultIOTupleTest
 /**
  * @author Jeen Broekstra
  */
-public class SPARQLStarXMLTupleTest extends AbstractQueryResultIOTupleTest {
+public class SPARQLTripleTermXMLTupleTest extends AbstractQueryResultIOTupleTest {
 
 	@Override
 	protected String getFileName() {
-		return "test.srxs";
+		return "test.srx";
 	}
 
 	@Override
 	protected TupleQueryResultFormat getTupleFormat() {
-		return TupleQueryResultFormat.SPARQL_STAR;
+		return TupleQueryResultFormat.SPARQL;
 	}
 
 	@Override

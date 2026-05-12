@@ -57,17 +57,17 @@ public class SPARQLResultsJSONWriter extends AbstractSPARQLJSONWriter implements
 		if (value instanceof TripleTerm) {
 			jg.writeStartObject();
 
-			jg.writeStringField(AbstractSPARQLJSONParser.TYPE, SPARQLStarResultsJSONConstants.TRIPLE);
+			jg.writeStringField(AbstractSPARQLJSONParser.TYPE, SPARQLTripleTermResultsJSONConstants.TRIPLE_TERM);
 
 			jg.writeObjectFieldStart(AbstractSPARQLJSONParser.VALUE);
 
-			jg.writeFieldName(SPARQLStarResultsJSONConstants.SUBJECT);
+			jg.writeFieldName(SPARQLTripleTermResultsJSONConstants.SUBJECT);
 			writeValue(((TripleTerm) value).getSubject());
 
-			jg.writeFieldName(SPARQLStarResultsJSONConstants.PREDICATE);
+			jg.writeFieldName(SPARQLTripleTermResultsJSONConstants.PREDICATE);
 			writeValue(((TripleTerm) value).getPredicate());
 
-			jg.writeFieldName(SPARQLStarResultsJSONConstants.OBJECT);
+			jg.writeFieldName(SPARQLTripleTermResultsJSONConstants.OBJECT);
 			writeValue(((TripleTerm) value).getObject());
 
 			jg.writeEndObject();

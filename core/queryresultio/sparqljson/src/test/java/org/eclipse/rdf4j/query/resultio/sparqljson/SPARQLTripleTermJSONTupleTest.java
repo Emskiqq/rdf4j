@@ -10,29 +10,27 @@
  *******************************************************************************/
 package org.eclipse.rdf4j.query.resultio.sparqljson;
 
+import org.eclipse.rdf4j.query.resultio.BooleanQueryResultFormat;
 import org.eclipse.rdf4j.query.resultio.TupleQueryResultFormat;
-import org.eclipse.rdf4j.query.resultio.TupleQueryResultParser;
-import org.eclipse.rdf4j.query.resultio.TupleQueryResultParserFactory;
+import org.eclipse.rdf4j.testsuite.query.resultio.AbstractQueryResultIOTupleTest;
 
 /**
- * {@link TupleQueryResultParserFactory} for creating instances of {@link SPARQLStarResultsJSONParser}.
- *
  * @author Pavel Mihaylov
  */
-public class SPARQLStarResultsJSONParserFactory implements TupleQueryResultParserFactory {
-	/**
-	 * Returns {@link TupleQueryResultFormat#JSON_STAR}.
-	 */
+public class SPARQLTripleTermJSONTupleTest extends AbstractQueryResultIOTupleTest {
 	@Override
-	public TupleQueryResultFormat getTupleQueryResultFormat() {
-		return SPARQLStarResultsJSONConstants.QUERY_RESULT_FORMAT;
+	protected String getFileName() {
+		return "test.srj";
 	}
 
-	/**
-	 * Returns a new instance of {@link SPARQLStarResultsJSONParser}.
-	 */
 	@Override
-	public TupleQueryResultParser getParser() {
-		return new SPARQLResultsJSONParser();
+	protected TupleQueryResultFormat getTupleFormat() {
+		return TupleQueryResultFormat.JSON;
 	}
+
+	@Override
+	protected BooleanQueryResultFormat getMatchingBooleanFormatOrNull() {
+		return BooleanQueryResultFormat.JSON;
+	}
+
 }
