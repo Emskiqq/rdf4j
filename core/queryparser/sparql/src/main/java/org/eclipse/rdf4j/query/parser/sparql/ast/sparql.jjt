@@ -1142,7 +1142,7 @@ void ReifiedTriple() :
 {
     <TRIPLE_OPEN>
         ( LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) TripleTerm() | GraphTerm() | Var() )
-        (IRIref() | Var())
+        Verb()
         ( LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) TripleTerm() | GraphTerm() | Var() )
         [
             <TILDE>
@@ -1157,7 +1157,7 @@ void TripleTerm() :
     <TRIPLE_OPEN>
         <LPAREN>
             (IRIref() | BlankNode() | TripleTerm() | Var())
-            (IRIref() | Var())
+            Verb()
             (IRIref() | BlankNode() | TripleTerm() | NumericLiteral() | RDFLiteral() |BooleanLiteral() | Var())
         <RPAREN>
     <TRIPLE_CLOSE>
@@ -1169,7 +1169,7 @@ void LabeledTripleTerm() :
     <TRIPLE_OPEN>
         <LPAREN>
             (IRIref() | LabeledBlankNode() | Var())
-            (IRIref() | Var())
+            Verb()
             (IRIref() | LabeledBlankNode() | TripleTerm() | NumericLiteral() | RDFLiteral() |BooleanLiteral() | Var())
         <RPAREN>
     <TRIPLE_CLOSE>
