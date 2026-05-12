@@ -68,11 +68,12 @@ public class Concat implements Function {
 					}
 					// If any subsequent literal has a different direction, drop direction metadata
 					else if (commonDirection != lit.getBaseDirection()) {
-						commonDirection = Literal.BaseDirection.NONE;
+						commonDirection = null;
 						useDirection = false;
 					}
 				} else {
 					useLanguageTag = false;
+					useDirection = false;
 				}
 
 				concatBuilder.append(lit.getLabel());
@@ -84,7 +85,7 @@ public class Concat implements Function {
 		Literal result;
 
 		if (useLanguageTag) {
-			if (commonDirection != Literal.BaseDirection.NONE) {
+			if (commonDirection != null) {
 				result = valueFactory.createLiteral(concatBuilder.toString(), commonLanguageTag, commonDirection);
 			} else {
 				result = valueFactory.createLiteral(concatBuilder.toString(), commonLanguageTag);
