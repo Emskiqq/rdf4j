@@ -34,7 +34,7 @@ public class SPARQLTripleTermTSVTupleQueryResultWriterTest extends AbstractTuple
 	@Override
 	protected RioSetting<?>[] getExpectedSupportedSettings() {
 		return new RioSetting<?>[] {
-				BasicWriterSettings.ENCODE_TRIPLE_TERMS, // TODO: again, decide on this.
+				BasicWriterSettings.ENCODE_TRIPLE_TERMS,
 				BasicWriterSettings.XSD_STRING_TO_PLAIN_LITERAL
 		};
 	}

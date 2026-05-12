@@ -13,7 +13,7 @@ package org.eclipse.rdf4j.query.resultio.sparqljson;
 import static org.eclipse.rdf4j.query.resultio.sparqljson.SPARQLTripleTermResultsJSONConstants.OBJECT;
 import static org.eclipse.rdf4j.query.resultio.sparqljson.SPARQLTripleTermResultsJSONConstants.PREDICATE;
 import static org.eclipse.rdf4j.query.resultio.sparqljson.SPARQLTripleTermResultsJSONConstants.SUBJECT;
-import static org.eclipse.rdf4j.query.resultio.sparqljson.SPARQLTripleTermResultsJSONConstants.TRIPLE;
+import static org.eclipse.rdf4j.query.resultio.sparqljson.SPARQLTripleTermResultsJSONConstants.TRIPLE_TERM;
 import static org.eclipse.rdf4j.query.resultio.sparqljson.SPARQLTripleTermResultsJSONConstants.TRIPLE_STARDOG;
 
 import java.io.IOException;
@@ -143,7 +143,7 @@ public class SPARQLResultsJSONParser extends AbstractSPARQLJSONParser implements
 
 	@Override
 	protected boolean checkTripleType(JsonParser jp, String type) {
-		if (!TRIPLE.equals(type) && !TRIPLE_STARDOG.equals(type)) {
+		if (!TRIPLE_TERM.equals(type) && !TRIPLE_STARDOG.equals(type)) {
 			throw new QueryResultParseException("Found a triple value but unexpected type: " + type,
 					jp.getCurrentLocation().getLineNr(),
 					jp.getCurrentLocation().getColumnNr());

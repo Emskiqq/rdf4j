@@ -23,7 +23,7 @@ final class SPARQLTripleTermResultsJSONConstants {
 	/**
 	 * Type string for serialized {@link TripleTerm} value.
 	 */
-	static final String TRIPLE = "triple";
+	static final String TRIPLE_TERM = "triple";
 
 	/**
 	 * Key name of the JSON object for the triple's subject.
