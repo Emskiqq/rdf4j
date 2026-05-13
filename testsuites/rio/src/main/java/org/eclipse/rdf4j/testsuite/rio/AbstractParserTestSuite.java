@@ -103,7 +103,7 @@ public abstract class AbstractParserTestSuite {
 				// We enter here because RDF 1.2 conformance tests include a reference to RDF 1.1 tests via a
 				// relative path, for example: '<../../rdf11/rdf-turtle/manifest.ttl>', in the manifest files.
 				// We already execute those as a separate test suit, so we can skip adding them to this one.
-                logger.info("Skipping sub manifest file: {}", bindingSet.getValue("manifestFile").stringValue());
+				logger.info("Skipping sub manifest file: {}", bindingSet.getValue("manifestFile").stringValue());
 			}
 		}
 	}

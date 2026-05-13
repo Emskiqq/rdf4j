@@ -48,7 +48,6 @@ public class NQuadsWriter extends NTriplesWriter {
 			noteRdf12Feature(st.getSubject(), st.getObject());
 			ensureVersionAnnouncement();
 
-
 			// SUBJECT
 			writeValue(st.getSubject());
 			writer.write(" ");

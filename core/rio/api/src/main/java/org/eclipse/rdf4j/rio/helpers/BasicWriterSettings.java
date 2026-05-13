@@ -126,7 +126,6 @@ public class BasicWriterSettings {
 			"org.eclipse.rdf4j.rio.include_rdf_version",
 			"Include the rdf version declaration if RDF 1.2 features exist.", Boolean.TRUE);
 
-
 	/**
 	 * Private default constructor.
 	 */
