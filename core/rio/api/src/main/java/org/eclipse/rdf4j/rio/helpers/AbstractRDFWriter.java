@@ -241,7 +241,7 @@ public abstract class AbstractRDFWriter implements RDFWriter, Sink {
 	 */
 	protected final void ensureVersionAnnouncement() throws RDFHandlerException {
 		if (!rdf12FeatureDetected || versionAnnouncementWritten || !requiresVersionAnnouncement()
-				|| !writerConfig.get(BasicWriterSettings.INCLUDE_RDF_VERSION)) {
+				|| !writerConfig.get(BasicWriterSettings.ANNOUNCE_RDF12_VERSION)) {
 			return;
 		}
 		prepareForVersionAnnouncement();

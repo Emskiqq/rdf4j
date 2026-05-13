@@ -14,17 +14,12 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.InputStream;
 import java.io.StringWriter;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
-import org.eclipse.rdf4j.model.util.Models;
 import org.eclipse.rdf4j.rio.*;
 import org.eclipse.rdf4j.rio.helpers.*;
 import org.eclipse.rdf4j.rio.languages.RFC3066LanguageHandler;
@@ -120,7 +115,7 @@ public class CanonicalizationTest extends TestCase {
 		// representation of the statements.
 		StringWriter stringWriter = new StringWriter();
 		RDFWriter writer = Rio.createWriter(format, stringWriter);
-		writer.getWriterConfig().set(BasicWriterSettings.INCLUDE_RDF_VERSION, false);
+		writer.getWriterConfig().set(BasicWriterSettings.ANNOUNCE_RDF12_VERSION, false);
 
 		Rio.write(inputCollection, writer);
 
