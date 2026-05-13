@@ -17,6 +17,7 @@ import java.io.Writer;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFHandlerException;
+import org.eclipse.rdf4j.rio.helpers.BasicWriterSettings;
 import org.eclipse.rdf4j.rio.ntriples.NTriplesWriter;
 
 /**
@@ -46,6 +47,7 @@ public class NQuadsWriter extends NTriplesWriter {
 			// the first affected quad is written.
 			noteRdf12Feature(st.getSubject(), st.getObject());
 			ensureVersionAnnouncement();
+
 
 			// SUBJECT
 			writeValue(st.getSubject());

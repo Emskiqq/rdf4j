@@ -118,6 +118,7 @@ public class NTriplesWriter extends AbstractRDFWriter implements CharSink {
 	@Override
 	protected void consumeStatement(Statement st) {
 		try {
+
 			// Detect RDF 1.2 features and emit version announcement before
 			// the first affected triple is written (pure streaming — no buffering).
 			noteRdf12Feature(st.getSubject(), st.getObject());

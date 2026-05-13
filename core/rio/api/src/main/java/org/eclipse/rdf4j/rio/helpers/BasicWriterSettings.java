@@ -116,6 +116,18 @@ public class BasicWriterSettings {
 			"Encodes triple terms to special IRIs for compatibility with RDF 1.1", Boolean.TRUE);
 
 	/**
+	 * Boolean setting for writer to determine whether it should declare the RDF version before RDF 1.2 features.
+	 * <p>
+	 * Defaults to true.
+	 * <p>
+	 * Can be overridden by setting system property {@code org.eclipse.rdf4j.rio.include_rdf_version}.
+	 */
+	public static final BooleanRioSetting INCLUDE_RDF_VERSION = new BooleanRioSetting(
+			"org.eclipse.rdf4j.rio.include_rdf_version",
+			"Include the rdf version declaration if RDF 1.2 features exist.", Boolean.TRUE);
+
+
+	/**
 	 * Private default constructor.
 	 */
 	private BasicWriterSettings() {

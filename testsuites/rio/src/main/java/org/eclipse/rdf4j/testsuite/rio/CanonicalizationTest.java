@@ -28,9 +28,7 @@ import org.eclipse.rdf4j.rio.RDFFormat;
 import org.eclipse.rdf4j.rio.RDFParser;
 import org.eclipse.rdf4j.rio.RDFWriter;
 import org.eclipse.rdf4j.rio.Rio;
-import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
-import org.eclipse.rdf4j.rio.helpers.ParseErrorCollector;
-import org.eclipse.rdf4j.rio.helpers.StatementCollector;
+import org.eclipse.rdf4j.rio.helpers.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,13 +111,19 @@ public class CanonicalizationTest extends TestCase {
 
 		final String canonicalOutput = new String(this.getClass().getResourceAsStream(outputURL).readAllBytes());
 
-		final StringWriter stringWriter = new StringWriter();
-		Rio.write(inputCollection, stringWriter, format);
+		// Using a RDFWriter to handle the statements, because we need to ignore the RDF version declaration for these
+		// tests. We cannot use the writer directly as a handler to the parser, since that way we lose the canonical
+		// representation of the statements.
+		StringWriter stringWriter = new StringWriter();
+		RDFWriter writer = Rio.createWriter(format, stringWriter);
+		writer.getWriterConfig().set(BasicWriterSettings.INCLUDE_RDF_VERSION, false);
+
+		Rio.write(inputCollection, writer);
 
 		if (!stringWriter.toString().equals(canonicalOutput)) {
 			logger.error("Writer output does not match canonical output:\n"
 					+ "Expected: " + canonicalOutput
-					+ "Actual:   " + stringWriter.toString());
+					+ "Actual:   " + stringWriter);
 			fail("Input did not produce canonical output");
 		}
 	}
