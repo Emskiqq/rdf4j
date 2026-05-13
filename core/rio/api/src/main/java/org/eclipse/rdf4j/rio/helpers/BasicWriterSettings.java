@@ -120,10 +120,10 @@ public class BasicWriterSettings {
 	 * <p>
 	 * Defaults to true.
 	 * <p>
-	 * Can be overridden by setting system property {@code org.eclipse.rdf4j.rio.include_rdf_version}.
+	 * Can be overridden by setting system property {@code org.eclipse.rdf4j.rio.announce_rdf12_version}.
 	 */
-	public static final BooleanRioSetting INCLUDE_RDF_VERSION = new BooleanRioSetting(
-			"org.eclipse.rdf4j.rio.include_rdf_version",
+	public static final BooleanRioSetting ANNOUNCE_RDF12_VERSION = new BooleanRioSetting(
+			"org.eclipse.rdf4j.rio.announce_rdf12_version",
 			"Include the rdf version declaration if RDF 1.2 features exist.", Boolean.TRUE);
 
 	/**
