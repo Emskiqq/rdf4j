@@ -18,17 +18,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.util.Models;
-import org.eclipse.rdf4j.rio.RDFFormat;
-import org.eclipse.rdf4j.rio.RDFParser;
-import org.eclipse.rdf4j.rio.RDFWriter;
-import org.eclipse.rdf4j.rio.Rio;
+import org.eclipse.rdf4j.rio.*;
 import org.eclipse.rdf4j.rio.helpers.*;
+import org.eclipse.rdf4j.rio.languages.RFC3066LanguageHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -89,6 +88,11 @@ public class CanonicalizationTest extends TestCase {
 		final ParseErrorCollector el = new ParseErrorCollector();
 		parser.setParseErrorListener(el);
 
+		// In RDF 1.2 the canonical representation of LANG_DIR requires all lower-case characters.
+		// LANG_DIR ::= '@' [a-zA-Z]+ ('-' [a-zA-Z0-9]+)* ('--' [a-zA-Z]+)?
+		// This is achieved by configuring the parser to use the RFC3066LanguageHandler.
+		List<LanguageHandler> customHandlers = List.of(new RFC3066LanguageHandler());
+		parser.getParserConfig().set(BasicParserSettings.LANGUAGE_HANDLERS, customHandlers);
 		parser.set(BasicParserSettings.PRESERVE_BNODE_IDS, true);
 
 		try {
