@@ -256,6 +256,11 @@ public class BasicParserSettings {
 		List<LanguageHandler> defaultLanguageHandlers = new ArrayList<>(1);
 		try {
 			LanguageHandlerRegistry registry = LanguageHandlerRegistry.getInstance();
+
+			// TODO: It may be e good idea to change the default LanguageHandler. As of RDF 1.2, the representation of
+			// LANG_DIR tag is defined as a sequence of all lower case characters. As opposed to that, the current
+			// handler
+			// for the BCP47 standard (RFC 5646) formats language tags as a lower case langtag and an upper case region.
 			String nextLanguageTagScheme = LanguageHandler.BCP47;
 			if (registry.has(nextLanguageTagScheme)) {
 				Optional<LanguageHandler> nextLanguageHandler = registry.get(nextLanguageTagScheme);

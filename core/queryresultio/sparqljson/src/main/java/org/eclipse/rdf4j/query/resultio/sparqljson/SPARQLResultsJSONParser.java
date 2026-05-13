@@ -13,8 +13,8 @@ package org.eclipse.rdf4j.query.resultio.sparqljson;
 import static org.eclipse.rdf4j.query.resultio.sparqljson.SPARQLTripleTermResultsJSONConstants.OBJECT;
 import static org.eclipse.rdf4j.query.resultio.sparqljson.SPARQLTripleTermResultsJSONConstants.PREDICATE;
 import static org.eclipse.rdf4j.query.resultio.sparqljson.SPARQLTripleTermResultsJSONConstants.SUBJECT;
-import static org.eclipse.rdf4j.query.resultio.sparqljson.SPARQLTripleTermResultsJSONConstants.TRIPLE_TERM;
 import static org.eclipse.rdf4j.query.resultio.sparqljson.SPARQLTripleTermResultsJSONConstants.TRIPLE_STARDOG;
+import static org.eclipse.rdf4j.query.resultio.sparqljson.SPARQLTripleTermResultsJSONConstants.TRIPLE_TERM;
 
 import java.io.IOException;
 import java.io.InputStream;

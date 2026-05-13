@@ -69,6 +69,9 @@ public class NegativeParserTest extends TestCase {
 			// targetParser.setDatatypeHandling(RDFParser.DatatypeHandling.IGNORE);
 
 			targetParser.set(BasicParserSettings.VERIFY_DATATYPE_VALUES, true);
+			targetParser.set(BasicParserSettings.FAIL_ON_UNKNOWN_LANGUAGES, true);
+			targetParser.set(BasicParserSettings.FAIL_ON_UNKNOWN_DATATYPES, true);
+
 			targetParser.setRDFHandler(new StatementCollector());
 
 			InputStream in = this.getClass().getResourceAsStream(inputURL);

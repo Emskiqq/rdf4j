@@ -21,6 +21,7 @@ import org.eclipse.rdf4j.repository.Repository;
 import org.eclipse.rdf4j.repository.RepositoryConnection;
 import org.eclipse.rdf4j.repository.sail.SailRepository;
 import org.eclipse.rdf4j.rio.RDFFormat;
+import org.eclipse.rdf4j.rio.RDFParseException;
 import org.eclipse.rdf4j.rio.RDFParser;
 import org.eclipse.rdf4j.sail.memory.MemoryStore;
 import org.slf4j.Logger;
@@ -95,8 +96,15 @@ public abstract class AbstractParserTestSuite {
 		for (final BindingSet bindingSet : queryResult) {
 			final String subManifestFile = bindingSet.getValue("manifestFile").stringValue();
 			final String subManifestFilePath = computeSubManifestFilePath(subManifestFile);
-			final InputStream inputStream = this.getClass().getResourceAsStream(subManifestFilePath);
-			con.add(inputStream, subManifestFile, RDFFormat.TURTLE);
+			try {
+				final InputStream inputStream = this.getClass().getResourceAsStream(subManifestFilePath);
+				con.add(inputStream, subManifestFile, RDFFormat.TURTLE);
+			} catch (RDFParseException e) {
+				// We enter here because RDF 1.2 conformance tests include a reference to RDF 1.1 tests via a
+				// relative path, for example: '<../../rdf11/rdf-turtle/manifest.ttl>', in the manifest files.
+				// We already execute those as a separate test suit, so we can skip adding them to this one.
+				logger.info("Skipping sub manifest file: {}", bindingSet.getValue("manifestFile").stringValue());
+			}
 		}
 	}
 

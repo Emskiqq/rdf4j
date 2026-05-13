@@ -31,8 +31,11 @@ public class NTriplesParserTest {
 	}
 
 	static class NTriples12ParserTest extends AbstractNTriplesParserTest {
+		protected static final String TESTS_W3C_BASE_URL = "https://w3c.github.io/rdf-tests/rdf/rdf12/rdf-n-triples/";
+		protected static final String TEST_W3C_FILE_BASE_PATH_RDF12 = "/testcases/ntriples/rdf12/";
+
 		private NTriples12ParserTest() {
-			super("/testcases/ntriples/rdf12/", "http://www.w3.org/2013/N-TriplesTests/");
+			super(TEST_W3C_FILE_BASE_PATH_RDF12, TESTS_W3C_BASE_URL);
 		}
 
 		public static Test suite() throws Exception {

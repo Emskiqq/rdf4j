@@ -31,8 +31,11 @@ public class NQuadsParserTest {
 	}
 
 	static class NQuads12ParserTest extends AbstractNQuadsParserTest {
+		protected static final String TESTS_W3C_BASE_URL = "https://w3c.github.io/rdf-tests/rdf/rdf12/rdf-n-quads/";
+		protected static final String TEST_W3C_FILE_BASE_PATH_RDF12 = "/testcases/nquads/rdf12/";
+
 		private NQuads12ParserTest() {
-			super("/testcases/nquads/rdf12/", "http://www.w3.org/2013/N-QuadsTests/");
+			super(TEST_W3C_FILE_BASE_PATH_RDF12, TESTS_W3C_BASE_URL);
 		}
 
 		public static Test suite() throws Exception {

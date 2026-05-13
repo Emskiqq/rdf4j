@@ -18,19 +18,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 
 import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Statement;
 import org.eclipse.rdf4j.model.util.Models;
-import org.eclipse.rdf4j.rio.RDFFormat;
-import org.eclipse.rdf4j.rio.RDFParser;
-import org.eclipse.rdf4j.rio.RDFWriter;
-import org.eclipse.rdf4j.rio.Rio;
-import org.eclipse.rdf4j.rio.helpers.BasicParserSettings;
-import org.eclipse.rdf4j.rio.helpers.ParseErrorCollector;
-import org.eclipse.rdf4j.rio.helpers.StatementCollector;
+import org.eclipse.rdf4j.rio.*;
+import org.eclipse.rdf4j.rio.helpers.*;
+import org.eclipse.rdf4j.rio.languages.RFC3066LanguageHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,6 +88,11 @@ public class CanonicalizationTest extends TestCase {
 		final ParseErrorCollector el = new ParseErrorCollector();
 		parser.setParseErrorListener(el);
 
+		// In RDF 1.2 the canonical representation of LANG_DIR requires all lower-case characters.
+		// LANG_DIR ::= '@' [a-zA-Z]+ ('-' [a-zA-Z0-9]+)* ('--' [a-zA-Z]+)?
+		// This is achieved by configuring the parser to use the RFC3066LanguageHandler.
+		List<LanguageHandler> customHandlers = List.of(new RFC3066LanguageHandler());
+		parser.getParserConfig().set(BasicParserSettings.LANGUAGE_HANDLERS, customHandlers);
 		parser.set(BasicParserSettings.PRESERVE_BNODE_IDS, true);
 
 		try {
@@ -113,13 +115,19 @@ public class CanonicalizationTest extends TestCase {
 
 		final String canonicalOutput = new String(this.getClass().getResourceAsStream(outputURL).readAllBytes());
 
-		final StringWriter stringWriter = new StringWriter();
-		Rio.write(inputCollection, stringWriter, format);
+		// Using a RDFWriter to handle the statements, because we need to ignore the RDF version declaration for these
+		// tests. We cannot use the writer directly as a handler to the parser, since that way we lose the canonical
+		// representation of the statements.
+		StringWriter stringWriter = new StringWriter();
+		RDFWriter writer = Rio.createWriter(format, stringWriter);
+		writer.getWriterConfig().set(BasicWriterSettings.INCLUDE_RDF_VERSION, false);
+
+		Rio.write(inputCollection, writer);
 
 		if (!stringWriter.toString().equals(canonicalOutput)) {
 			logger.error("Writer output does not match canonical output:\n"
 					+ "Expected: " + canonicalOutput
-					+ "Actual:   " + stringWriter.toString());
+					+ "Actual:   " + stringWriter);
 			fail("Input did not produce canonical output");
 		}
 	}
