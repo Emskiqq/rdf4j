@@ -33,6 +33,7 @@ import org.eclipse.rdf4j.model.Resource;
 import org.eclipse.rdf4j.model.TripleTerm;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
+import org.eclipse.rdf4j.model.base.CoreDatatype;
 import org.eclipse.rdf4j.model.impl.BooleanLiteral;
 import org.eclipse.rdf4j.model.vocabulary.FN;
 import org.eclipse.rdf4j.model.vocabulary.RDF;
@@ -2537,7 +2538,7 @@ public class TupleExprBuilder extends AbstractASTVisitor {
 				literal = valueFactory.createLiteral(label, lang);
 			}
 		} else {
-			literal = valueFactory.createLiteral(label);
+			literal = valueFactory.createLiteral(label, CoreDatatype.XSD.STRING);
 		}
 
 		return new ValueConstant(literal);

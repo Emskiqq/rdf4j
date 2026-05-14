@@ -26,7 +26,7 @@ import org.eclipse.rdf4j.model.TripleTerm;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
-import org.eclipse.rdf4j.query.algebra.evaluation.RDFStarTripleSource;
+import org.eclipse.rdf4j.query.algebra.evaluation.NativeTripleTermSource;
 import org.eclipse.rdf4j.sail.SailException;
 import org.eclipse.rdf4j.sail.TripleSourceIterationWrapper;
 
@@ -34,13 +34,13 @@ import org.eclipse.rdf4j.sail.TripleSourceIterationWrapper;
  * Implementation of the TripleSource interface using {@link SailDataset}
  */
 @InternalUseOnly
-public class SailDatasetTripleSource implements RDFStarTripleSource {
+public class SailDatasetTripleTermSource implements NativeTripleTermSource {
 
 	private final ValueFactory vf;
 
 	private final SailDataset dataset;
 
-	public SailDatasetTripleSource(ValueFactory vf, SailDataset dataset) {
+	public SailDatasetTripleTermSource(ValueFactory vf, SailDataset dataset) {
 		this.vf = vf;
 		this.dataset = dataset;
 	}
@@ -108,8 +108,8 @@ public class SailDatasetTripleSource implements RDFStarTripleSource {
 	}
 
 	@Override
-	public CloseableIteration<? extends TripleTerm> getRdfStarTriples(Resource subj, IRI pred,
-			Value obj) throws QueryEvaluationException {
+	public CloseableIteration<? extends TripleTerm> getTripleTerms(Resource subj, IRI pred,
+	                                                               Value obj) throws QueryEvaluationException {
 		CloseableIteration<? extends TripleTerm> triples = null;
 		TripleSourceIterationWrapper<? extends TripleTerm> iterationWrapper = null;
 		try {

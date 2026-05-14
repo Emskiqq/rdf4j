@@ -662,8 +662,8 @@ void BindingValue() :
 |	RDFLiteral()
 |	NumericLiteral()
 |	BooleanLiteral()
-|   ConstTripleTerm()
 |	<UNDEF>
+|   ConstTripleTerm()
 }
 
 void SolutionModifier() #void :

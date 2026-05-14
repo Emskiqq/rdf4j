@@ -1571,12 +1571,12 @@ public class SyntaxTreeBuilder
 				BooleanLiteral();
 				break;
 			}
-			case TRIPLE_OPEN: {
-				ConstTripleTerm();
-				break;
-			}
 			case UNDEF: {
 				jj_consume_token(UNDEF);
+				break;
+			}
+			case TRIPLE_OPEN: {
+				ConstTripleTerm();
 				break;
 			}
 			default:

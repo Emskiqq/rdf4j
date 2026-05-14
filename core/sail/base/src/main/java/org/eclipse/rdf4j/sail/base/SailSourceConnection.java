@@ -238,7 +238,7 @@ public abstract class SailSourceConnection extends AbstractNotifyingSailConnecti
 			branch = branch(IncludeInferred.fromBoolean(includeInferred));
 			rdfDataset = branch.dataset(getIsolationLevel());
 
-			TripleSource tripleSource = new SailDatasetTripleSource(vf, rdfDataset);
+			TripleSource tripleSource = new SailDatasetTripleTermSource(vf, rdfDataset);
 			EvaluationStrategy strategy = getEvaluationStrategy(dataset, tripleSource);
 			if (trackResultSize) {
 				strategy.setTrackResultSize(trackResultSize);

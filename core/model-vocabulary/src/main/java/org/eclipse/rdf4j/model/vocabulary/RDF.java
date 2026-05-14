@@ -99,4 +99,15 @@ public class RDF {
 	/** http://www.w3.org/1999/02/22-rdf-syntax-ns#JSON */
 	public static final IRI JSON = CoreDatatype.RDF.JSON.getIri();
 
+	/** http://www.w3.org/1999/02/22-rdf-syntax-ns#PropositionForm */
+	public final static IRI PROPOSITION_FORM = Vocabularies.createIRI(RDF.NAMESPACE, "PropositionForm");
+
+	/** http://www.w3.org/1999/02/22-rdf-syntax-ns#propositionFormSubject */
+	public final static IRI PROPOSITION_FORM_SUBJECT = Vocabularies.createIRI(RDF.NAMESPACE, "propositionFormSubject");
+
+	/** http://www.w3.org/1999/02/22-rdf-syntax-ns#propositionFormPredicate */
+	public final static IRI PROPOSITION_FORM_PREDICATE = Vocabularies.createIRI(RDF.NAMESPACE, "propositionFormPredicate");
+
+	/** http://www.w3.org/1999/02/22-rdf-syntax-ns#propositionFormObject */
+	public final static IRI PROPOSITION_FORM_OBJECT = Vocabularies.createIRI(RDF.NAMESPACE, "propositionFormObject");
 }

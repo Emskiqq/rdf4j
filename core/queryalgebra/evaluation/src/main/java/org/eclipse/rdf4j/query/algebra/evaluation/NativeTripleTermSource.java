@@ -17,7 +17,7 @@ import org.eclipse.rdf4j.model.TripleTerm;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 
-public interface RDFStarTripleSource extends TripleSource {
+public interface NativeTripleTermSource extends TripleSource {
 	/**
 	 * Gets all TripleTerm nodes that have a specific subject, predicate and/or object. All three parameters may be null
 	 * to indicate wildcards.
@@ -28,7 +28,7 @@ public interface RDFStarTripleSource extends TripleSource {
 	 * @return An iterator over the relevant triples.
 	 * @throws QueryEvaluationException If the rdf star triple source failed to get the statements.
 	 */
-	CloseableIteration<? extends TripleTerm> getRdfStarTriples(Resource subj, IRI pred,
-			Value obj) throws QueryEvaluationException;
+	CloseableIteration<? extends TripleTerm> getTripleTerms(Resource subj, IRI pred,
+	                                                        Value obj) throws QueryEvaluationException;
 
 }

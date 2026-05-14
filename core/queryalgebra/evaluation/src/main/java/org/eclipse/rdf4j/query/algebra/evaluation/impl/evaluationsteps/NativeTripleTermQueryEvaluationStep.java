@@ -21,21 +21,21 @@ import org.eclipse.rdf4j.query.BindingSet;
 import org.eclipse.rdf4j.query.MutableBindingSet;
 import org.eclipse.rdf4j.query.QueryEvaluationException;
 import org.eclipse.rdf4j.query.algebra.Var;
+import org.eclipse.rdf4j.query.algebra.evaluation.NativeTripleTermSource;
 import org.eclipse.rdf4j.query.algebra.evaluation.QueryEvaluationStep;
-import org.eclipse.rdf4j.query.algebra.evaluation.RDFStarTripleSource;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.QueryEvaluationContext;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.StrictEvaluationStrategy;
 
-public class RdfStarQueryEvaluationStep implements QueryEvaluationStep {
+public class NativeTripleTermQueryEvaluationStep implements QueryEvaluationStep {
 	private final Var extVar;
 	private final Var predVar;
 	private final Var objVar;
 	private final Var subjVar;
-	private final RDFStarTripleSource tripleSource;
+	private final NativeTripleTermSource tripleSource;
 	private final QueryEvaluationContext context;
 
-	public RdfStarQueryEvaluationStep(Var subjVar, Var predVar, Var objVar, Var extVar,
-			RDFStarTripleSource tripleSource, QueryEvaluationContext context) {
+	public NativeTripleTermQueryEvaluationStep(Var subjVar, Var predVar, Var objVar, Var extVar,
+	                                           NativeTripleTermSource tripleSource, QueryEvaluationContext context) {
 		this.extVar = extVar;
 		this.predVar = predVar;
 		this.objVar = objVar;
@@ -81,7 +81,7 @@ public class RdfStarQueryEvaluationStep implements QueryEvaluationStep {
 
 		// in case the
 		CloseableIteration<? extends TripleTerm> sourceIter = tripleSource
-				.getRdfStarTriples((Resource) subjValue, (IRI) predValue, objValue);
+				.getTripleTerms((Resource) subjValue, (IRI) predValue, objValue);
 
 		FilterIteration<TripleTerm> filterIter = new FilterIteration<>(
 				sourceIter) {

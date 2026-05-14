@@ -27,7 +27,7 @@ import org.eclipse.rdf4j.query.algebra.evaluation.TripleSource;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.QueryEvaluationContext;
 import org.eclipse.rdf4j.query.algebra.evaluation.impl.StrictEvaluationStrategy;
 
-public class ReificationRdfStarQueryEvaluationStep implements QueryEvaluationStep {
+public class EncodedTripleTermQueryEvaluationStep implements QueryEvaluationStep {
 	private final Var objVar;
 	private final Var extVar;
 	private final Var subjVar;
@@ -35,8 +35,8 @@ public class ReificationRdfStarQueryEvaluationStep implements QueryEvaluationSte
 	private final TripleSource tripleSource;
 	private final QueryEvaluationContext context;
 
-	public ReificationRdfStarQueryEvaluationStep(Var subjVar, Var predVar, Var objVar, Var extVar,
-			TripleSource tripleSource, QueryEvaluationContext context) {
+	public EncodedTripleTermQueryEvaluationStep(Var subjVar, Var predVar, Var objVar, Var extVar,
+	                                            TripleSource tripleSource, QueryEvaluationContext context) {
 		this.objVar = objVar;
 		this.extVar = extVar;
 		this.subjVar = subjVar;
@@ -52,9 +52,9 @@ public class ReificationRdfStarQueryEvaluationStep implements QueryEvaluationSte
 		final Value objValue = StrictEvaluationStrategy.getVarValue(objVar, bindings);
 		final Value extValue = StrictEvaluationStrategy.getVarValue(extVar, bindings);
 		// standard reification iteration
-		// 1. walk over resources used as subjects of (x rdf:type rdf:Statement)
+		// 1. walk over resources used as subjects of (x rdf:type rdf:PROPOSITION_FORM)
 		final CloseableIteration<? extends Resource> iter = new ConvertingIteration<Statement, Resource>(
-				tripleSource.getStatements((Resource) extValue, RDF.TYPE, RDF.STATEMENT)) {
+				tripleSource.getStatements((Resource) extValue, RDF.TYPE, RDF.PROPOSITION_FORM)) {
 
 			@Override
 			protected Resource convert(Statement sourceObject)
@@ -77,17 +77,17 @@ public class ReificationRdfStarQueryEvaluationStep implements QueryEvaluationSte
 					Resource theNode = iter.next();
 					MutableBindingSet result = context.createBindingSet(bindings);
 					// does it match the subjectValue/subjVar
-					if (!matchValue(theNode, subjValue, subjVar, result, RDF.SUBJECT)) {
+					if (!matchValue(theNode, subjValue, subjVar, result, RDF.PROPOSITION_FORM_SUBJECT)) {
 						continue;
 					}
-					// the predicate, if not, remove the binding that hass been added
+					// the predicate, if not, remove the binding that has been added
 					// when the subjValue has been checked and its value added to the solution
-					if (!matchValue(theNode, predValue, predVar, result, RDF.PREDICATE)) {
+					if (!matchValue(theNode, predValue, predVar, result, RDF.PROPOSITION_FORM_PREDICATE)) {
 						continue;
 					}
 					// check the object, if it do not match
 					// remove the bindings added for subj and pred
-					if (!matchValue(theNode, objValue, objVar, result, RDF.OBJECT)) {
+					if (!matchValue(theNode, objValue, objVar, result, RDF.PROPOSITION_FORM_OBJECT)) {
 						continue;
 					}
 					// add the extVar binding if we do not have a value bound.
