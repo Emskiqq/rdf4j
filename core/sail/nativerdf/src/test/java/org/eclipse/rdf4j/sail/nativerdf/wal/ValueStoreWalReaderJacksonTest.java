@@ -25,9 +25,11 @@ import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.sail.nativerdf.ValueStore;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+@Tag("slow")
 class ValueStoreWalReaderJacksonTest {
 
 	private static final ValueFactory VF = SimpleValueFactory.getInstance();
@@ -69,11 +71,11 @@ class ValueStoreWalReaderJacksonTest {
 			assertThat(records.stream()
 					.anyMatch(r -> r.valueKind() == ValueStoreWalValueKind.IRI
 							&& r.lexical().equals("http://example.com/resource")))
-					.isTrue();
+									.isTrue();
 			assertThat(records.stream()
 					.anyMatch(r -> r.valueKind() == ValueStoreWalValueKind.LITERAL
 							&& r.lexical().equals(specialText)))
-					.isTrue();
+									.isTrue();
 			assertThat(scan.lastValidLsn()).isGreaterThan(ValueStoreWAL.NO_LSN);
 		}
 	}

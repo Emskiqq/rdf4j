@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.eclipse.rdf4j</groupId>
 		<artifactId>rdf4j-compliance</artifactId>
-		<version>5.3.0-SNAPSHOT</version>
+		<version>5.3.2-SNAPSHOT</version>
 	</parent>
 	<artifactId>rdf4j-elasticsearch-compliance</artifactId>
 	<name>RDF4J: Elasticsearch Sail Tests</name>
@@ -109,8 +109,14 @@
 		</dependency>
 		<dependency>
 			<groupId>org.testcontainers</groupId>
-			<artifactId>junit-jupiter</artifactId>
+			<artifactId>testcontainers-junit-jupiter</artifactId>
 			<version>${testcontainers.version}</version>
+			<scope>test</scope>
+		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-annotations</artifactId>
+			<version>${jackson.annotations.version}</version>
 			<scope>test</scope>
 		</dependency>
 		<dependency>

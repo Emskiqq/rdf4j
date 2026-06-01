@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.eclipse.rdf4j</groupId>
 	<artifactId>rdf4j</artifactId>
-	<version>5.3.0-SNAPSHOT</version>
+	<version>5.3.2-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>Eclipse RDF4J</name>
 	<description>An extensible Java framework for RDF and SPARQL</description>
@@ -57,14 +57,15 @@
 		<enforce-javaee-provided.fail>true</enforce-javaee-provided.fail>
 		<slf4j.version>1.7.36</slf4j.version>
 		<logback.version>1.2.13</logback.version>
-		<log4j.version>2.25.3</log4j.version>
+		<log4j.version>2.25.4</log4j.version>
 		<httpclient.version>4.5.14</httpclient.version>
-		<jackson.version>2.13.5</jackson.version>
+		<jackson.version>2.21.0</jackson.version>
+		<jackson.annotations.version>2.21</jackson.annotations.version>
 		<httpcore.version>4.4.16</httpcore.version>
 		<jsonldjava.version>0.13.4</jsonldjava.version>
 		<last.japicmp.compare.version>5.0.0</last.japicmp.compare.version>
 		<jaxb.version>2.3.8</jaxb.version>
-		<lwjgl.version>3.3.6</lwjgl.version>
+		<lwjgl.version>3.4.1</lwjgl.version>
 		<lucene.version>8.9.0</lucene.version>
 		<solr.version>8.9.0</solr.version>
 		<elasticsearch.version>7.15.2</elasticsearch.version>
@@ -75,7 +76,7 @@
 		<junit.version>5.9.3</junit.version>
 		<jetty.version>9.4.54.v20240208</jetty.version>
 		<netty.version>4.1.111.Final</netty.version>
-		<testcontainers.version>1.20.6</testcontainers.version>
+		<testcontainers.version>2.0.3</testcontainers.version>
 		<argLine />
 	</properties>
 	<profiles>
@@ -330,7 +331,7 @@
 					<plugin>
 						<groupId>com.diffplug.spotless</groupId>
 						<artifactId>spotless-maven-plugin</artifactId>
-						<version>2.46.1</version>
+						<version>2.34.0</version>  <!-- Do not update until https://github.com/diffplug/spotless/issues/1996 is fixed-->
 						<configuration>
 							<java>
 								<includes>
@@ -343,7 +344,7 @@
 								<importOrder>
 									<order>java,javax,org,com</order>
 								</importOrder>
-								<removeUnusedImports />
+<!--								<removeUnusedImports /> RE-ENABLE THIS WHEN WE MOVE TO USING JAVA 25-->
 								<trimTrailingWhitespace />
 								<endWithNewline />
 							</java>
@@ -455,7 +456,7 @@
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-annotations</artifactId>
-				<version>${jackson.version}</version>
+				<version>${jackson.annotations.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>com.opencsv</groupId>
@@ -642,7 +643,7 @@
 			<dependency>
 				<groupId>org.assertj</groupId>
 				<artifactId>assertj-core</artifactId>
-				<version>3.24.2</version>
+				<version>3.27.7</version>
 			</dependency>
 			<dependency>
 				<groupId>com.github.jsonld-java</groupId>
@@ -861,7 +862,7 @@
 					<version>3.5.4</version>
 					<configuration>
 						<forkCount>1</forkCount>
-						<reuseForks>false</reuseForks>
+						<reuseForks>true</reuseForks>
 						<!-- Prepend JaCoCo agent args when profile 'jacoco' sets @{argLine} -->
 						<argLine>@{argLine} -Xmx4G</argLine>
 						<includes>

@@ -1054,7 +1054,9 @@ public final class ThemeDataSetGenerator {
 	}
 
 	private static IRI entity(String namespace, String category, int id) {
-		return VF.createIRI(namespace, category + "/" + id);
+		// Build the full IRI string so local-name splitting stays canonical for stores
+		// that persist namespace/local-name components separately.
+		return VF.createIRI(namespace + category + "/" + id);
 	}
 
 	private static Literal literal(String value) {

@@ -27,9 +27,11 @@ import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
 import org.eclipse.rdf4j.model.vocabulary.XMLSchema;
 import org.eclipse.rdf4j.sail.nativerdf.ValueStore;
+import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+@Tag("slow")
 class ValueStoreWalIntegrationTest {
 
 	private static final ValueFactory VF = SimpleValueFactory.getInstance();
@@ -240,7 +242,7 @@ class ValueStoreWalIntegrationTest {
 					.filter(Files::isRegularFile)
 					.map(path -> path.getFileName().toString())
 					.filter(name -> name.startsWith("wal-")))
-					.allMatch(name -> name.matches("wal-[1-9]\\d*\\.v1(?:\\.gz)?"));
+							.allMatch(name -> name.matches("wal-[1-9]\\d*\\.v1(?:\\.gz)?"));
 		}
 	}
 }
