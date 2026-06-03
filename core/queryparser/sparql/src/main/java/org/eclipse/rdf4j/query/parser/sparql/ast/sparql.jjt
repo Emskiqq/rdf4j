@@ -116,7 +116,7 @@ public class SyntaxTreeBuilder {
                     "Annotations not allowed in DELETE DATA — blank nodes are forbidden");
             }
 			if (!previousTokenDtSep && !tok.image.equals("^^") && !tok.image.startsWith("@") &&
-			    !tok.image.equals("(") && !tok.image.equals(">>") && !tok.image.equals("|") && !tok.image.equals("}")) {
+			    !tok.image.equals("(") && !tok.image.equals(">>") && !tok.image.equals("|")) {
 				sb.append(" ");
 			}
 			if (tok.kind == LBRACE) nesting++;
@@ -1137,13 +1137,31 @@ void GraphTerm() #void :
 	ReifiedTriple()
 }
 
+void GraphTermNoNil() #void :
+{
+	boolean positive = true;
+}
+{
+	IRIref()
+|
+	RDFLiteral()
+|
+	NumericLiteral()
+|
+	BooleanLiteral()
+|
+	BlankNode()
+|
+	ReifiedTriple()
+}
+
 void ReifiedTriple() :
 {}
 {
     <TRIPLE_OPEN>
-        ( LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) TripleTerm() | GraphTerm() | Var() )
+        ( LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) TripleTerm() | GraphTermNoNil() | Var() )
         Verb()
-        ( LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) TripleTerm() | GraphTerm() | Var() )
+        ( LOOKAHEAD(<TRIPLE_OPEN> <LPAREN>) TripleTerm() | GraphTermNoNil() | Var() )
         [
             <TILDE>
             ( IRIref() | BlankNode() | Var() )
@@ -1181,7 +1199,7 @@ void ConstTripleTerm() :
     <TRIPLE_OPEN>
         <LPAREN>
             ( IRIref() | LabeledBlankNode() )
-            IRIref()
+            Verb()
             ( ConstTripleTerm() | IRIref() | LabeledBlankNode() | NumericLiteral() | RDFLiteral() |BooleanLiteral() )
         <RPAREN>
     <TRIPLE_CLOSE>

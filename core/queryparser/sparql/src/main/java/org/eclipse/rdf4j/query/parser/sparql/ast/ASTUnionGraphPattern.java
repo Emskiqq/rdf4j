@@ -16,6 +16,7 @@ public class ASTUnionGraphPattern extends SimpleNode {
 
 	public ASTUnionGraphPattern(int id) {
 		super(id);
+		setScopeChange(true);
 	}
 
 	public ASTUnionGraphPattern(SyntaxTreeBuilder p, int id) {

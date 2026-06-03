@@ -29,6 +29,6 @@ public interface NativeTripleTermSource extends TripleSource {
 	 * @throws QueryEvaluationException If the rdf star triple source failed to get the statements.
 	 */
 	CloseableIteration<? extends TripleTerm> getTripleTerms(Resource subj, IRI pred,
-	                                                        Value obj) throws QueryEvaluationException;
+			Value obj) throws QueryEvaluationException;
 
 }

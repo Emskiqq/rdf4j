@@ -41,7 +41,7 @@ public class LmdbLiteral extends AbstractLiteral implements LmdbValue {
 	 */
 	private String language;
 
-	private BaseDirection baseDirection;
+	private BaseDirection baseDirection = BaseDirection.NONE;
 
 	/**
 	 * The literal's datatype.

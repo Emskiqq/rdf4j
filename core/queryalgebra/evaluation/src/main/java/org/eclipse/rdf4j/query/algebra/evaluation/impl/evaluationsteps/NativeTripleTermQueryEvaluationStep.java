@@ -35,7 +35,7 @@ public class NativeTripleTermQueryEvaluationStep implements QueryEvaluationStep 
 	private final QueryEvaluationContext context;
 
 	public NativeTripleTermQueryEvaluationStep(Var subjVar, Var predVar, Var objVar, Var extVar,
-	                                           NativeTripleTermSource tripleSource, QueryEvaluationContext context) {
+			NativeTripleTermSource tripleSource, QueryEvaluationContext context) {
 		this.extVar = extVar;
 		this.predVar = predVar;
 		this.objVar = objVar;

@@ -95,6 +95,8 @@ class FileIO {
 
 	public static final int RDFSTAR_TRIPLE_MARKER = 11;
 
+	public static final int BASE_DIRECTION_MARKER = 12;
+
 	public static final int EOF_MARKER = 127;
 
 	/*-----------*
@@ -286,6 +288,10 @@ class FileIO {
 				dataOut.writeByte(LANG_LITERAL_MARKER);
 				writeString(label, dataOut);
 				writeString(lit.getLanguage().get(), dataOut);
+				if (lit.getBaseDirection() != Literal.BaseDirection.NONE) {
+					dataOut.writeByte(BASE_DIRECTION_MARKER);
+					dataOut.writeByte(lit.getBaseDirection().ordinal());
+				}
 			} else {
 				dataOut.writeByte(DATATYPE_LITERAL_MARKER);
 				writeString(label, dataOut);
@@ -314,6 +320,15 @@ class FileIO {
 		} else if (valueTypeMarker == LANG_LITERAL_MARKER) {
 			String label = readString(dataIn);
 			String language = readString(dataIn);
+			dataIn.mark(1);
+			byte nextByte = dataIn.readByte();
+			if (nextByte == BASE_DIRECTION_MARKER) {
+				byte directionOrdinal = dataIn.readByte();
+				Literal.BaseDirection baseDirection = Literal.BaseDirection.values()[directionOrdinal];
+				return vf.createLiteral(label, language, baseDirection);
+			} else {
+				dataIn.reset();
+			}
 			return vf.createLiteral(label, language);
 		} else if (valueTypeMarker == DATATYPE_LITERAL_MARKER) {
 			String label = readString(dataIn);
