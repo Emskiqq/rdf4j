@@ -10,6 +10,8 @@
  *******************************************************************************/
 package org.eclipse.rdf4j.query.resultio.sparqljson;
 
+import static org.eclipse.rdf4j.query.resultio.sparqljson.AbstractSPARQLJSONParser.ITS_DIR;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.io.OutputStreamWriter;
@@ -299,6 +301,9 @@ abstract class AbstractSPARQLJSONWriter extends AbstractQueryResultWriter implem
 
 			if (Literals.isLanguageLiteral(lit)) {
 				jg.writeObjectField("xml:lang", lit.getLanguage().orElse(null));
+				if (lit.getBaseDirection() != Literal.BaseDirection.NONE) {
+					jg.writeObjectField(ITS_DIR, lit.getBaseDirection().toString());
+				}
 			} else {
 				IRI datatype = lit.getDatatype();
 				boolean ignoreDatatype = datatype.equals(XSD.STRING) && xsdStringToPlainLiteral();

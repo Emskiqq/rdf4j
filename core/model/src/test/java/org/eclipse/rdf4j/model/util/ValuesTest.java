@@ -37,7 +37,7 @@ import org.eclipse.rdf4j.model.IRI;
 import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Model;
 import org.eclipse.rdf4j.model.Statement;
-import org.eclipse.rdf4j.model.Triple;
+import org.eclipse.rdf4j.model.TripleTerm;
 import org.eclipse.rdf4j.model.ValueFactory;
 import org.eclipse.rdf4j.model.base.CoreDatatype;
 import org.eclipse.rdf4j.model.impl.SimpleValueFactory;
@@ -510,18 +510,18 @@ public class ValuesTest {
 
 	@Test
 	public void testTriple() {
-		Triple triple = triple(RDF.ALT, RDF.TYPE, RDFS.CONTAINER);
+		TripleTerm tripleTerm = triple(RDF.ALT, RDF.TYPE, RDFS.CONTAINER);
 
-		assertThat(triple).isNotNull();
-		assertThat(triple.getSubject()).isEqualTo(RDF.ALT);
-		assertThat(triple.getPredicate()).isEqualTo(RDF.TYPE);
-		assertThat(triple.getObject()).isEqualTo(RDFS.CONTAINER);
+		assertThat(tripleTerm).isNotNull();
+		assertThat(tripleTerm.getSubject()).isEqualTo(RDF.ALT);
+		assertThat(tripleTerm.getPredicate()).isEqualTo(RDF.TYPE);
+		assertThat(tripleTerm.getObject()).isEqualTo(RDFS.CONTAINER);
 	}
 
 	@Test
 	public void testTriple_InjectedValueFactory() {
 		triple(vf, RDF.ALT, RDF.TYPE, RDFS.CONTAINER);
-		verify(vf).createTriple(RDF.ALT, RDF.TYPE, RDFS.CONTAINER);
+		verify(vf).createTripleTerm(RDF.ALT, RDF.TYPE, RDFS.CONTAINER);
 	}
 
 	@Test
@@ -542,18 +542,18 @@ public class ValuesTest {
 	@Test
 	public void testTripleFromStatement() {
 		Statement st = SimpleValueFactory.getInstance().createStatement(RDF.ALT, RDF.TYPE, RDFS.CONTAINER);
-		Triple triple = triple(st);
-		assertThat(triple).isNotNull();
-		assertThat(triple.getSubject()).isEqualTo(st.getSubject());
-		assertThat(triple.getPredicate()).isEqualTo(st.getPredicate());
-		assertThat(triple.getObject()).isEqualTo(st.getObject());
+		TripleTerm tripleTerm = triple(st);
+		assertThat(tripleTerm).isNotNull();
+		assertThat(tripleTerm.getSubject()).isEqualTo(st.getSubject());
+		assertThat(tripleTerm.getPredicate()).isEqualTo(st.getPredicate());
+		assertThat(tripleTerm.getObject()).isEqualTo(st.getObject());
 	}
 
 	@Test
 	public void testTripleFromStatement_InjectedValueFactory() {
 		Statement st = SimpleValueFactory.getInstance().createStatement(RDF.ALT, RDF.TYPE, RDFS.CONTAINER);
 		triple(vf, st);
-		verify(vf).createTriple(RDF.ALT, RDF.TYPE, RDFS.CONTAINER);
+		verify(vf).createTripleTerm(RDF.ALT, RDF.TYPE, RDFS.CONTAINER);
 	}
 
 	@Test

@@ -17,6 +17,7 @@ import javax.xml.datatype.Duration;
 import javax.xml.datatype.XMLGregorianCalendar;
 
 import org.eclipse.rdf4j.model.Literal;
+import org.eclipse.rdf4j.model.TripleTerm;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.base.CoreDatatype;
 import org.eclipse.rdf4j.model.datatypes.XMLDatatypeUtil;
@@ -78,8 +79,14 @@ public class QueryEvaluationUtil {
 			if (datatype == CoreDatatype.XSD.STRING) {
 				return !label.isEmpty();
 			} else if (datatype == CoreDatatype.XSD.BOOLEAN) {
-				// also false for illegal values
-				return "true".equals(label) || "1".equals(label);
+				if ("true".equals(label) || "1".equals(label)) {
+					return true;
+				} else if ("false".equals(label) || "0".equals(label)) {
+					return false;
+				} else {
+					// ill-typed literal — "z"^^xsd:boolean must be a type error per SPARQL spec
+					throw new ValueExprEvaluationException();
+				}
 			} else if (datatype == CoreDatatype.XSD.DECIMAL) {
 				try {
 					String normDec = XMLDatatypeUtil.normalizeDecimal(label);
@@ -127,6 +134,12 @@ public class QueryEvaluationUtil {
 		if (leftVal != null && leftVal.isLiteral() && rightVal != null && rightVal.isLiteral()) {
 			// Both left and right argument is a Literal
 			return compareLiterals((Literal) leftVal, (Literal) rightVal, operator, strict);
+		} else if (leftVal != null && leftVal.isTripleTerm() && rightVal != null && rightVal.isTripleTerm()) {
+			TripleTerm leftTerm = (TripleTerm) leftVal;
+			TripleTerm rightTerm = (TripleTerm) rightVal;
+			return compare(leftTerm.getSubject(), rightTerm.getSubject(), operator, strict) &&
+					compare(leftTerm.getPredicate(), rightTerm.getPredicate(), operator, strict) &&
+					compare(leftTerm.getObject(), rightTerm.getObject(), operator, strict);
 		} else {
 			// All other value combinations
 			switch (operator) {
