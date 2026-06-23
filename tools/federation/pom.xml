@@ -8,7 +8,7 @@
 	<parent>
 		<groupId>org.eclipse.rdf4j</groupId>
 		<artifactId>rdf4j-tools</artifactId>
-		<version>5.2.2-jakarta</version>
+		<version>5.3.2-SNAPSHOT</version>
 	</parent>
 	<build>
 		<plugins>
@@ -112,18 +112,6 @@
 			<artifactId>jetty-ee10-webapp</artifactId>
 			<version>12.1.0.alpha1</version>
 			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>com.github.ziplet</groupId>
-			<artifactId>ziplet</artifactId>
-			<version>2.0.0</version>
-			<scope>test</scope>
-			<exclusions>
-				<exclusion>
-					<artifactId>*</artifactId>
-					<groupId>*</groupId>
-				</exclusion>
-			</exclusions>
 		</dependency>
 		<dependency>
 			<groupId>${project.groupId}</groupId>

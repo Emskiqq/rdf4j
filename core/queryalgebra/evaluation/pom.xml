@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.eclipse.rdf4j</groupId>
 		<artifactId>rdf4j-queryalgebra</artifactId>
-		<version>5.2.2-jakarta</version>
+		<version>5.3.2-SNAPSHOT</version>
 	</parent>
 	<artifactId>rdf4j-queryalgebra-evaluation</artifactId>
 	<name>RDF4J: Query algebra - evaluation</name>
@@ -59,6 +59,12 @@
 		<dependency>
 			<groupId>com.google.guava</groupId>
 			<artifactId>guava</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>${project.groupId}</groupId>
+			<artifactId>rdf4j-benchmark-common</artifactId>
+			<version>${project.version}</version>
+			<scope>test</scope>
 		</dependency>
 		<dependency>
 			<groupId>org.openjdk.jmh</groupId>

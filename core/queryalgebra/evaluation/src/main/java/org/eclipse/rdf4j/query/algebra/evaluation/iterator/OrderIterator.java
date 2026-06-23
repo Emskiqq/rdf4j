@@ -19,6 +19,7 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.util.AbstractQueue;
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -95,6 +96,9 @@ public class OrderIterator extends DelayedIteration<BindingSet> {
 	protected CloseableIteration<BindingSet> createIteration() throws QueryEvaluationException {
 		BindingSet threshold = null;
 		List<BindingSet> list = new LinkedList<>();
+		long inputRowsRead = 0;
+		long spillCount = 0;
+		long spillBytes = 0;
 		int limit2 = limit >= Integer.MAX_VALUE / 2 ? Integer.MAX_VALUE : (int) limit * 2;
 		int syncThreshold = (int) Math.min(iterationSyncThreshold, Integer.MAX_VALUE);
 		try {
@@ -103,6 +107,10 @@ public class OrderIterator extends DelayedIteration<BindingSet> {
 					SerializedQueue<BindingSet> queue = new SerializedQueue<>("orderiter");
 					sort(list).forEach(queue::add);
 					serialized.add(queue);
+					spillCount++;
+					long bytes = queue.estimatedBytes();
+					spillBytes += bytes;
+					onSpillToDisk(queue.size(), bytes);
 					decrement(list.size() - queue.size());
 					list = new ArrayList<>(list.size());
 					if (threshold == null && serialized.stream().mapToLong(SerializedQueue::size).sum() >= limit) {
@@ -119,6 +127,8 @@ public class OrderIterator extends DelayedIteration<BindingSet> {
 					}
 				}
 				BindingSet next = iter.next();
+				inputRowsRead++;
+				onInputRowRead(next);
 				if (threshold == null || comparator.compare(next, threshold) < 0) {
 					list.add(next);
 					increment();
@@ -139,12 +149,25 @@ public class OrderIterator extends DelayedIteration<BindingSet> {
 		iterators.add(sort(list).iterator());
 
 		SortedIterators<BindingSet> iterator = new SortedIterators<>(comparator, distinct, iterators);
+		onSortCompleted(inputRowsRead, spillCount, spillBytes);
 
 		return new LimitIteration<>(new CloseableIteratorIteration<>(iterator), limit);
 	}
 
 	protected void increment() throws QueryEvaluationException {
 		// give subclasses a chance to stop query evaluation
+	}
+
+	protected void onInputRowRead(BindingSet next) throws QueryEvaluationException {
+		// give subclasses a chance to track consumed input rows
+	}
+
+	protected void onSpillToDisk(int spilledRows, long spilledBytes) throws QueryEvaluationException {
+		// give subclasses a chance to track spill behavior
+	}
+
+	protected void onSortCompleted(long inputRows, long spillCount, long spillBytes) {
+		// give subclasses a chance to track final sort statistics
 	}
 
 	protected void decrement(int amount) throws QueryEvaluationException {
@@ -299,13 +322,22 @@ public class OrderIterator extends DelayedIteration<BindingSet> {
 			file.delete();
 		}
 
+		public long estimatedBytes() {
+			try {
+				output.flush();
+				return file.length();
+			} catch (IOException e) {
+				return 0L;
+			}
+		}
+
 	}
 
 	private static class SortedIterators<E> implements Iterator<E> {
 
 		private final List<Iterator<E>> iterators;
 
-		private final TreeMap<E, List<Integer>> head;
+		private final TreeMap<E, ArrayDeque<Integer>> head;
 
 		private final boolean distinct;
 
@@ -344,8 +376,8 @@ public class OrderIterator extends DelayedIteration<BindingSet> {
 			if (head.isEmpty()) {
 				return null;
 			} else {
-				Entry<E, List<Integer>> e = head.firstEntry();
-				advance(e.getValue().remove(0));
+				Entry<E, ArrayDeque<Integer>> e = head.firstEntry();
+				advance(e.getValue().removeFirst());
 				if (e.getValue().isEmpty()) {
 					head.remove(e.getKey());
 				}
@@ -356,11 +388,12 @@ public class OrderIterator extends DelayedIteration<BindingSet> {
 		private void advance(int i) {
 			while (iterators.get(i).hasNext()) {
 				E key = iterators.get(i).next();
-				if (!head.containsKey(key)) {
-					head.put(key, new LinkedList<>(List.of(i)));
+				ArrayDeque<Integer> integers = head.get(key);
+				if (integers == null) {
+					head.put(key, new ArrayDeque<>(List.of(i)));
 					break;
 				} else if (!distinct) {
-					head.get(key).add(i);
+					integers.add(i);
 					break;
 				}
 			}

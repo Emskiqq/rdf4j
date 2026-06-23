@@ -21,6 +21,7 @@ import org.eclipse.rdf4j.model.Literal;
 import org.eclipse.rdf4j.model.Value;
 import org.eclipse.rdf4j.model.base.CoreDatatype;
 import org.eclipse.rdf4j.model.datatypes.XMLDatatypeUtil;
+import org.eclipse.rdf4j.model.impl.BooleanLiteral;
 import org.eclipse.rdf4j.model.util.Literals;
 import org.eclipse.rdf4j.query.algebra.Compare.CompareOp;
 
@@ -53,6 +54,20 @@ public class QueryEvaluationUtility {
 	 * @return The EBV of <var>value</var>.
 	 */
 	public static Result getEffectiveBooleanValue(Value value) {
+		if (value == BooleanLiteral.TRUE) {
+			return Result._true;
+		} else if (value == BooleanLiteral.FALSE) {
+			return Result._false;
+		} else if (value == null) {
+			return Result.incompatibleValueExpression;
+		} else if (!value.isLiteral()) {
+			return Result.incompatibleValueExpression;
+		}
+
+		return getEffectiveBooleanValueSlow(value);
+	}
+
+	private static Result getEffectiveBooleanValueSlow(Value value) {
 		if (value.isLiteral()) {
 			Literal literal = (Literal) value;
 			String label = literal.getLabel();
@@ -356,11 +371,6 @@ public class QueryEvaluationUtility {
 
 		return false;
 	}
-
-//	public static boolean isPlainLiteral(Literal l) {
-//		return l.getCoreDatatype().filter(d -> d == CoreDatatype.XSD.STRING).isPresent();
-////		return l.getCoreDatatype().orElse(null) == CoreDatatype.XSD.STRING;
-//	}
 
 	/**
 	 * Checks whether the supplied literal is a "simple literal". A "simple literal" is a literal with no language tag

@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>org.eclipse.rdf4j</groupId>
 	<artifactId>rdf4j</artifactId>
-	<version>5.2.2-jakarta</version>
+	<version>5.3.2-SNAPSHOT</version>
 	<packaging>pom</packaging>
 	<name>Eclipse RDF4J</name>
 	<description>An extensible Java framework for RDF and SPARQL</description>
@@ -48,6 +48,40 @@
 		<!-- for maven Central deployment it is important that bom is the last module -->
 		<module>bom</module>
 	</modules>
+	<properties>
+		<java.version>11</java.version>
+		<maven.compiler.release>${java.version}</maven.compiler.release>
+		<maven.compiler.source>${java.version}</maven.compiler.source>
+		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
+		<enforce-javaee-provided.fail>true</enforce-javaee-provided.fail>
+		<slf4j.version>1.7.36</slf4j.version>
+		<logback.version>1.2.13</logback.version>
+		<log4j.version>2.25.4</log4j.version>
+		<httpclient.version>4.5.14</httpclient.version>
+		<jackson.version>2.21.0</jackson.version>
+		<jackson.annotations.version>2.21</jackson.annotations.version>
+		<httpcore.version>4.4.16</httpcore.version>
+		<jsonldjava.version>0.13.4</jsonldjava.version>
+		<last.japicmp.compare.version>6.0.0</last.japicmp.compare.version>
+		<jaxb.version>2.3.8</jaxb.version>
+		<lwjgl.version>3.3.6</lwjgl.version>
+		<lucene.version>9.11.1</lucene.version>
+		<solr.version>9.8.0</solr.version>
+		<elasticsearch.version>8.17.2</elasticsearch.version>
+		<spring.version>6.2.18</spring.version>
+		<guava.version>32.1.3-jre</guava.version>
+		<jmhVersion>1.37</jmhVersion>
+		<servlet.version>6.1.0</servlet.version>
+		<junit.version>5.9.3</junit.version>
+		<jetty.version>12.1.0.alpha1</jetty.version>
+		<netty.version>4.1.111.Final</netty.version>
+		<testcontainers.version>2.0.3</testcontainers.version>
+		<argLine />
+		<!-- Ontotext repos -->
+		<internal.repo>https://maven.ontotext.com/content/repositories/owlim-releases</internal.repo>
+		<snapshots.repo>https://maven.ontotext.com/content/repositories/owlim-snapshots</snapshots.repo>
+	</properties>
 	<profiles>
 		<profile>
 			<id>ossrh</id>
@@ -199,7 +233,6 @@
 				<skipITs>true</skipITs>
 				<formatter.skip>true</formatter.skip>
 				<impsort.skip>true</impsort.skip>
-				<xml-format.skip>true</xml-format.skip>
 				<japicmp.skip>true</japicmp.skip>
 				<enforcer.skip>true</enforcer.skip>
 			</properties>
@@ -293,35 +326,62 @@
 			<build>
 				<plugins>
 					<plugin>
-						<groupId>net.revelc.code.formatter</groupId>
-						<artifactId>formatter-maven-plugin</artifactId>
+						<groupId>com.diffplug.spotless</groupId>
+						<artifactId>spotless-maven-plugin</artifactId>
+						<version>2.34.0</version>  <!-- Do not update until https://github.com/diffplug/spotless/issues/1996 is fixed-->
+						<configuration>
+							<java>
+								<includes>
+									<include>src/main/java/**/*.java</include>
+									<include>src/test/java/**/*.java</include>
+								</includes>
+								<eclipse>
+									<file>${maven.multiModuleProjectDirectory}/eclipse-settings/eclipse-rdf4j-conventions.xml</file>
+								</eclipse>
+								<importOrder>
+									<order>java,javax,org,com</order>
+								</importOrder>
+<!--								<removeUnusedImports /> RE-ENABLE THIS WHEN WE MOVE TO USING JAVA 25-->
+								<trimTrailingWhitespace />
+								<endWithNewline />
+							</java>
+							<formats>
+								<format>
+									<!-- All XML files, except those excluded below -->
+									<includes>
+										<include>**/*.xml</include>
+									</includes>
+									<!-- Mirror old xml-format-maven-plugin excludes and avoid double-formatting POMs -->
+									<excludes>
+										<exclude>esclipse-settings/**</exclude>
+										<exclude>**/target/**</exclude>
+										<exclude>**/site/themes/**</exclude>
+										<exclude>**/.*/**</exclude>
+										<exclude>**/dependency-reduced-pom.xml</exclude>
+									</excludes>
+									<eclipseWtp>
+										<type>XML</type>
+										<files>
+											<file>${maven.multiModuleProjectDirectory}/eclipse-settings/xml.prefs</file>
+										</files>
+									</eclipseWtp>
+								</format>
+							</formats>
+							<skip>${formatter.skip}</skip>
+						</configuration>
 						<executions>
 							<execution>
-								<goals>
-									<goal>format</goal>
-								</goals>
-							</execution>
-						</executions>
-					</plugin>
-					<plugin>
-						<groupId>net.revelc.code</groupId>
-						<artifactId>impsort-maven-plugin</artifactId>
-						<executions>
-							<execution>
-								<goals>
-									<goal>sort</goal>
-								</goals>
-							</execution>
-						</executions>
-					</plugin>
-					<plugin>
-						<groupId>au.com.acegi</groupId>
-						<artifactId>xml-format-maven-plugin</artifactId>
-						<executions>
-							<execution>
+								<id>spotless-apply</id>
 								<phase>process-resources</phase>
 								<goals>
-									<goal>xml-format</goal>
+									<goal>apply</goal>
+								</goals>
+							</execution>
+							<execution>
+								<id>spotless-check</id>
+								<phase>verify</phase>
+								<goals>
+									<goal>check</goal>
 								</goals>
 							</execution>
 						</executions>
@@ -347,14 +407,6 @@
 								<lifecycleMappingMetadata>
 									<pluginExecutions>
 										<pluginExecution>
-											<pluginExecutionFilter>
-												<groupId>au.com.acegi</groupId>
-												<artifactId>xml-format-maven-plugin</artifactId>
-												<versionRange>[0,)</versionRange>
-												<goals>
-													<goal>xml-format</goal>
-												</goals>
-											</pluginExecutionFilter>
 											<action>
 												<execute>
 													<runOnConfiguration>false</runOnConfiguration>
@@ -371,37 +423,6 @@
 			</build>
 		</profile>
 	</profiles>
-	<properties>
-		<java.version>11</java.version>
-		<maven.compiler.release>${java.version}</maven.compiler.release>
-		<maven.compiler.source>${java.version}</maven.compiler.source>
-		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<enforce-javaee-provided.fail>true</enforce-javaee-provided.fail>
-		<slf4j.version>1.7.36</slf4j.version>
-		<logback.version>1.2.13</logback.version>
-		<log4j.version>2.17.2</log4j.version>
-		<httpclient.version>4.5.14</httpclient.version>
-		<jackson.version>2.13.5</jackson.version>
-		<httpcore.version>4.4.16</httpcore.version>
-		<jsonldjava.version>0.13.4</jsonldjava.version>
-		<last.japicmp.compare.version>6.0.0</last.japicmp.compare.version>
-		<jaxb.version>2.3.8</jaxb.version>
-		<lwjgl.version>3.3.6</lwjgl.version>
-		<lucene.version>9.11.1</lucene.version>
-		<solr.version>9.8.0</solr.version>
-		<elasticsearch.version>8.17.2</elasticsearch.version>
-		<spring.version>6.2.1</spring.version>
-		<guava.version>32.1.3-jre</guava.version>
-		<jmhVersion>1.37</jmhVersion>
-		<servlet.version>6.1.0</servlet.version>
-		<junit.version>5.9.3</junit.version>
-		<jetty.version>12.1.0.alpha1</jetty.version>
-		<netty.version>4.1.111.Final</netty.version>
-		<!-- Ontotext repos -->
-		<internal.repo>https://maven.ontotext.com/content/repositories/owlim-releases</internal.repo>
-		<snapshots.repo>https://maven.ontotext.com/content/repositories/owlim-snapshots</snapshots.repo>
-	</properties>
 	<dependencyManagement>
 		<dependencies>
 			<!-- Jackson Bill-of-Materials -->
@@ -432,7 +453,7 @@
 			<dependency>
 				<groupId>com.fasterxml.jackson.core</groupId>
 				<artifactId>jackson-annotations</artifactId>
-				<version>${jackson.version}</version>
+				<version>${jackson.annotations.version}</version>
 			</dependency>
 			<dependency>
 				<groupId>com.opencsv</groupId>
@@ -714,15 +735,6 @@
 					<version>1.6</version>
 				</plugin>
 				<plugin>
-					<groupId>au.com.acegi</groupId>
-					<artifactId>xml-format-maven-plugin</artifactId>
-					<version>3.3.1</version>
-					<configuration>
-						<tabIndent>true</tabIndent>
-						<excludes>eclipse-settings/**,**/target/**,**/site/themes/**,**/.*/**</excludes>
-					</configuration>
-				</plugin>
-				<plugin>
 					<groupId>org.apache.maven.plugins</groupId>
 					<artifactId>maven-eclipse-plugin</artifactId>
 					<version>2.10</version>
@@ -838,7 +850,7 @@
 					<version>3.5.4</version>
 					<configuration>
 						<!-- Prepend JaCoCo agent args when profile 'jacoco' sets @{argLine} -->
-						<argLine>@{argLine} -Xmx2G</argLine>
+						<argLine>@{argLine} -Xmx4G</argLine>
 					</configuration>
 				</plugin>
 				<plugin>
@@ -847,9 +859,9 @@
 					<version>3.5.4</version>
 					<configuration>
 						<forkCount>1</forkCount>
-						<reuseForks>false</reuseForks>
+						<reuseForks>true</reuseForks>
 						<!-- Prepend JaCoCo agent args when profile 'jacoco' sets @{argLine} -->
-						<argLine>@{argLine} -Xmx2G</argLine>
+						<argLine>@{argLine} -Xmx4G</argLine>
 						<includes>
 							<include>**/*IT.java</include>
 						</includes>

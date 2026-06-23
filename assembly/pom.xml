@@ -4,7 +4,7 @@
 	<parent>
 		<groupId>org.eclipse.rdf4j</groupId>
 		<artifactId>rdf4j</artifactId>
-		<version>5.2.2-jakarta</version>
+		<version>5.3.2-SNAPSHOT</version>
 	</parent>
 	<artifactId>rdf4j-assembly</artifactId>
 	<packaging>pom</packaging>
@@ -90,7 +90,7 @@
 					<createDependencyReducedPom>false</createDependencyReducedPom>
 					<shadedArtifactAttached>false</shadedArtifactAttached>
 					<transformers>
-						<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+						<transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer" />
 						<transformer implementation="org.apache.maven.plugins.shade.resource.IncludeResourceTransformer">
 							<resource>edl-v1.0.txt</resource>
 							<file>../edl-v1.0.txt</file>
