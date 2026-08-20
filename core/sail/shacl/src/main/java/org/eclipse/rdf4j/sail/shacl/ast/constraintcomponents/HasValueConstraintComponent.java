@@ -201,10 +201,8 @@ public class HasValueConstraintComponent extends AbstractConstraintComponent {
 		String query = effectiveTarget.getQuery(false);
 
 		if (scope == Scope.nodeShape) {
-
 			query += "\n" + "FILTER(" + effectiveTarget.getTargetVar().asSparqlVariable() + " != "
 					+ stringRepresentationOfValue(hasValue) + ")";
-
 		} else {
 			var value = StatementMatcher.Variable.VALUE;
 

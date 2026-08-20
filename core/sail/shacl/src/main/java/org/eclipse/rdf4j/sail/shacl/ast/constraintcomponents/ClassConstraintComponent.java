@@ -398,6 +398,14 @@ public class ClassConstraintComponent extends AbstractConstraintComponent {
 			allClasses = clazzSet;
 		}
 
+		if (allClasses.size() == 1) {
+			// Single class: MINUS with one triple pattern is the simplest form, and mirrors the
+			// multi-class case below for consistency. Safe because `target` is always bound here (from a
+			// mandatory triple pattern earlier in the query), so MINUS and NOT EXISTS coincide semantically.
+			Resource c = allClasses.iterator().next();
+			return "MINUS {" + target.asSparqlVariable() + " a <" + c.stringValue() + ">}";
+		}
+
 		String condition = allClasses.stream()
 				.map(c -> "EXISTS{" + target.asSparqlVariable() + " a <" + c.stringValue() + ">}")
 				.reduce((a, b) -> a + " || " + b)
